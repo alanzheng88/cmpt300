@@ -29,9 +29,44 @@ int openFile(char* filename, FILE** file) {
   return 0;
 }
 
+void parse(FILE* file, char* result, char* search) {
+  char* buffer = (char *) malloc(BUFFER_SIZE);
+  char* status = (char *) malloc(sizeof(NULL));
+  char* currentToken = (char *) malloc(BUFFER_SIZE);
+  
+  do {
+    status = fgets(buffer, BUFFER_SIZE, file); 
+      
+      // printf("DEBUG: %s\n", buffer);
+    
+    // !*search equivalent to (search[0] != '\0')
+    if (search && !*search) {
+      // search is empty
+      continue;
+    }
+
+    if (strstr(buffer, search)) {
+      currentToken = strtok(buffer, ":");
+      while (currentToken != NULL) {
+        
+          // printf("DEBUG: FOUND - %s\n", currentToken);
+
+        currentToken = strtok(NULL, ":");
+        if (currentToken != NULL) {
+          strcpy(result, currentToken);
+        }
+      }
+      status = NULL; 
+    }
+
+  } while (status != NULL);
+  
+  free(buffer);
+  free(status);
+  free(currentToken);
+}
+
 int main() {
-  printf("string: %s\n"  "length of string: %zd\n",
-          CPUINFO_FILE,   strlen(CPUINFO_FILE));
 
   FILE* file;
   int statusCode;
@@ -40,28 +75,9 @@ int main() {
   if (statusCode == -1) { return -1; }
 
 
-
-  char* buffer;
-  char* success;
-  char* pch;
   char* result = (char *) malloc(BUFFER_SIZE);
-
-  do {
-    success = fgets(buffer, BUFFER_SIZE, file);
-    printf("%s\n", buffer);
-    if (strstr(buffer, "model name")) {
-      pch = strtok(buffer, ":");
-      while (pch != NULL) {
-        printf("FOUND: %s\n", pch);
-        pch = strtok(NULL, ":");
-        if (pch != NULL) {
-          strcpy(result, pch);
-        }
-      }
-      return 0;
-    }
-  } while (success != NULL);
- 
+  parse(file, result, "model name");
+  printf("result is: %s\n", result);
   free(result);
 
   return 0;
