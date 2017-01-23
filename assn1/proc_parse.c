@@ -48,7 +48,7 @@ void parse(FILE* file, char** result, char* search, char* delimiter) {
         
           // printf("DEBUG: FOUND - %s\n", currentToken);
 
-        currentToken = strtok(NULL, ":");
+        currentToken = strtok(NULL, delimiter);
         if (currentToken != NULL) {
           strcpy(*result, currentToken);
         }
