@@ -121,28 +121,28 @@ char* getSystemInfo(char* filename, char* filter, char* delimiter) {
 
 void printProcessorType() {
   char* cpuInfo = getSystemInfo(CPUINFO_FILE, "model name", ":");
-  if (!cpuInfo) { printf("\ninvalid cpu info file provided"); return; }
+  if (!cpuInfo) { printf("invalid cpu info file provided\n"); return; }
   printf("%*s: %s", COLUMN_PRINT_PADDING, "CPU Model Name",  cpuInfo);
   free(cpuInfo);
 }
 
 void printKernelVersion() {
   char* versionInfo = getSystemInfo(VERSION_FILE, NULL, NULL);
-  if (!versionInfo) { printf("\ninvalid version file provided"); return; }
+  if (!versionInfo) { printf("invalid version file provided\n"); return; }
   printf("%*s: %s", COLUMN_PRINT_PADDING, "Kernel Version", versionInfo);
   free(versionInfo);
 }
 
 void printTotalMemoryAmount() {
   char* memoryInfo = getSystemInfo(MEMINFO_FILE, "MemTotal", ":");
-  if (!memoryInfo) { printf("\ninvalid meminfo file provided"); return; }
+  if (!memoryInfo) { printf("invalid meminfo file provided\n"); return; }
   printf("%*s: %s", COLUMN_PRINT_PADDING, "Main Memory Total", memoryInfo);
   free(memoryInfo);
 }
 
 void printTimeSinceSystemLastBooted() {
   char* uptimeInfo = getSystemInfo(UPTIME_FILE, "", NULL);
-  if (!uptimeInfo) { printf("\ninvalid uptime file provided"); return; }
+  if (!uptimeInfo) { printf("invalid uptime file provided\n"); return; }
   printf("%*s: %s Seconds", COLUMN_PRINT_PADDING, "Uptime", uptimeInfo);
   free(uptimeInfo);
 }
