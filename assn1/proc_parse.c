@@ -27,19 +27,27 @@ int openFile(char* filename, FILE** file) {
 
 void parse(FILE* file, char** result, char* search, char* delimiter) {
   char* buffer = (char *) malloc(BUFFER_SIZE);
-  char* status = (char *) malloc(sizeof(NULL));
+  char* status = (char *) malloc(BUFFER_SIZE);
   char* currentToken = (char *) malloc(BUFFER_SIZE);
  
   do {
-    status = fgets(buffer, BUFFER_SIZE, file); 
+    strcpy(status, fgets(buffer, BUFFER_SIZE, file)); 
       
       // printf("DEBUG: %s\n", buffer);
     
-    // !*search equivalent to (search[0] != '\0')
-    if ( !search || (search && !*search) ) {
-      // search is empty
+    // copies over content for the first line of file
+    if (!search) {
+      strcpy(*result, buffer); 
+      break;
+    }
+
+    // copies over characters in file until whitespace is encountered
+    if (search && (*search == '\0')) {
+      int index = 0;
+      while (!isspace(buffer[index])) { index++; }
+      buffer[index] = '\0';
       strcpy(*result, buffer);
-      continue;
+      break;
     }
 
     if (strstr(buffer, search)) {
@@ -53,12 +61,12 @@ void parse(FILE* file, char** result, char* search, char* delimiter) {
           strcpy(*result, currentToken);
         }
       }
-      status = NULL; 
+      break;
     }
 
   } while (status != NULL);
-  
-  free(buffer);
+ 
+  free(buffer); 
   free(status);
   free(currentToken);
 }
@@ -70,7 +78,6 @@ char* getSystemInfo(char* filename, char* filter, char* delimiter) {
   if (statusCode == -1) { return NULL; }
   char* result = (char *) malloc(BUFFER_SIZE);
   parse(file, &result, filter, delimiter);
-  //printf("result is: %s\n", result);
   return result;
 }
 
@@ -96,9 +103,9 @@ void printTotalMemoryAmount() {
 }
 
 void printTimeSinceSystemLastBooted() {
-  char* uptimeInfo = getSystemInfo(UPTIME_FILE, " ", " ");
+  char* uptimeInfo = getSystemInfo(UPTIME_FILE, "", NULL);
   if (!uptimeInfo) { printf("invalid uptime file provided"); }
-  printf("Uptime: %s", uptimeInfo);
+  printf("Uptime: %s\n", uptimeInfo);
   free(uptimeInfo);
 }
 
