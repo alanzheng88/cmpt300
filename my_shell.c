@@ -25,14 +25,15 @@ void initStringArray(StringArray *a, size_t initialSize) {
 void insertStringArray(StringArray *a, char* stringToInsert) {
   if (a->used == a->size) {
     a->size *= 2;
-    a->array = realloc(a->array, a->size * sizeof(char*));
+    a->array = realloc(a->array, a->size * sizeof(char*)); 
   }
-  a->array[a->used++] = stringToInsert;
+  a->array[a->used] = malloc(strlen(stringToInsert) * sizeof(char*));
+  strcpy(a->array[a->used++], stringToInsert);
 }
 
 void freeStringArray(StringArray *a) {
   char** head = a->array;
-  while (head != NULL) {
+  while ((head != NULL) && (*head != NULL)) { 
     free(*head);
     *head = NULL;
     head++;
@@ -43,35 +44,8 @@ void freeStringArray(StringArray *a) {
   a->size = 0;
 }
 
-// dynamically allocate memory
-void allocateParsedInputs(char*** parsedInputs, int size) {
-  *parsedInputs = malloc(size * sizeof(char*));
-  if (parsedInputs == NULL) {
-    printf("Failed to allocate memory in allocateParseInputs()\n");
-    exit(EXIT_FAILURE);
-  }
-}
-
-// reallocating memory
-void reallocateParsedInputs(char*** parsedInputs) {
-  
-}
-
-// clean up pointers
-void freeParsedInputs(char*** parsedInputs) {
-  char** ptr = *parsedInputs;
-  char* current = *ptr;
-  while (current != NULL) {
-    free(current);
-    current = NULL;
-  }
-  free(ptr);
-  ptr = NULL;
-}
-
 // helper functions
 void readInput(FILE* stream, char* buffer) {
-
   if (stream == stdin) {
     fgets(buffer, STDIN_READ_COUNT, stream);
   }
@@ -82,44 +56,39 @@ void stripLinefeed(char* str) {
   str[strcspn(str, "\r\n")] = '\0';
 }
 
-void parseInput(char* input, char** parsedInputs) {
-
+void parseInput(char* input, StringArray* parsedInputs) {
+  char** ptr = parsedInputs->array;
   char* token;
   char* str = input;
   char* delimiter = " "; 
-  int counter = 0;
 
   stripLinefeed(input);
   do {
     token = strtok_r(str, delimiter, &str);
     if (token == NULL) break;
     printf("token (%s) length: %ld\n", token, strlen(token));
-    *parsedInputs = malloc(strlen(token) + 1);
-    strcpy(*parsedInputs, token);
-    printf("after strcpy length: %ld\n", strlen(*parsedInputs));
-    parsedInputs++;
-    counter++;
-  } while ((token != NULL) && (counter < PARSED_INPUT_INITIAL_SIZE));
-
+    insertStringArray(parsedInputs, token);
+    ptr++;  
+  } while (token != NULL);
+ 
 }
 
 int main() {
-
   pid_t pid;
   FILE* stream;
-  char* input;
-  char** parsedInputs;
+  char* input; 
+  StringArray* parsedInputs = malloc(sizeof(StringArray));
 
   input = malloc(STDIN_READ_COUNT);
-  allocateParsedInputs(&parsedInputs, PARSED_INPUT_INITIAL_SIZE);
-
+  initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
   printf(">> ");
   readInput(stdin, input);
   printf("input is: %s\n", input);
   parseInput(input, parsedInputs);
 
+  freeStringArray(parsedInputs);
+  free(parsedInputs);
   free(input);
-  freeParsedInputs(&parsedInputs);
 
   return 0;
 }
