@@ -68,29 +68,37 @@ void parseInput(char* input, StringArray* parsedInputs) {
   do {
     token = strtok_r(str, delimiter, &str);
     if (token == NULL) break;
-    printf("token (%s) length: %ld\n", token, strlen(token));
+    //printf("token (%s) length: %ld\n", token, strlen(token));
     insertStringArray(parsedInputs, token);
     ptr++;  
   } while (token != NULL);
 }
 
+void checkExitStatus(char* input) {
+  if (strcmp(input, EXIT_COMMAND) == 0) {
+    exit(0);
+  }
+}
+
 void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
-  printf("parsedInputs->used = %ld\n", parsedInputs->used);
   if (parsedInputs->used > 1) {
     *argsPtr = (parsedInputs->array) + 1;
-    printf("[before] argsPtr: %s\n", **argsPtr);
   } else {
     *argsPtr = NULL;
-  }
+  } 
 }
 
 void processCommand(char* command, char** args) {
   printf("command: %s\n", command);
   printf("args: \n");
-  while (*args != NULL) { 
-    printf("   -%s\n", *args);
-    args++;
+  if (args != NULL) {
+    while (*args != NULL) {
+      printf("   - %s\n", *args);
+      args++;
+    }
   }
+  printf("\n\n");
+
 }
 
 int main() {
@@ -101,21 +109,18 @@ int main() {
   char* command;
   char** args;
 
-  while (TRUE) {
-    printf("in while loop\n");
+  while (TRUE) { 
     input = malloc(STDIN_READ_COUNT);
     initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
     printf(">> ");
-    readInput(stdin, input);
-    printf("input is: %s\n", input);
+    readInput(stdin, input); 
     parseInput(input, parsedInputs);
     command = (parsedInputs->array)[0];
-    assignArgs(&args, parsedInputs);
-    printf("[after] %s\n", *args);
+    checkExitStatus(command);
+    assignArgs(&args, parsedInputs); 
     pid = fork();
     if (pid == 0) {
-      printf("[child process] running command...\n");
-      //printf("[child process] args is: %s\n", *args); 
+      printf("[child process] running command...\n"); 
       processCommand(command, args);   
       _exit(EXIT_SUCCESS);
     } else {
