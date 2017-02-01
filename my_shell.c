@@ -3,8 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#define TRUE 1
 #define STDIN_READ_COUNT 1024
 #define PARSED_INPUT_INITIAL_SIZE 4
+#define EXIT_COMMAND "exit"
 
 typedef struct {
   char** array;
@@ -70,7 +72,25 @@ void parseInput(char* input, StringArray* parsedInputs) {
     insertStringArray(parsedInputs, token);
     ptr++;  
   } while (token != NULL);
- 
+}
+
+void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
+  printf("parsedInputs->used = %ld\n", parsedInputs->used);
+  if (parsedInputs->used > 1) {
+    *argsPtr = (parsedInputs->array) + 1;
+    printf("[before] argsPtr: %s\n", **argsPtr);
+  } else {
+    *argsPtr = NULL;
+  }
+}
+
+void processCommand(char* command, char** args) {
+  printf("command: %s\n", command);
+  printf("args: \n");
+  while (*args != NULL) { 
+    printf("   -%s\n", *args);
+    args++;
+  }
 }
 
 int main() {
@@ -78,13 +98,31 @@ int main() {
   FILE* stream;
   char* input; 
   StringArray* parsedInputs = malloc(sizeof(StringArray));
+  char* command;
+  char** args;
 
-  input = malloc(STDIN_READ_COUNT);
-  initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
-  printf(">> ");
-  readInput(stdin, input);
-  printf("input is: %s\n", input);
-  parseInput(input, parsedInputs);
+  while (TRUE) {
+    printf("in while loop\n");
+    input = malloc(STDIN_READ_COUNT);
+    initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
+    printf(">> ");
+    readInput(stdin, input);
+    printf("input is: %s\n", input);
+    parseInput(input, parsedInputs);
+    command = (parsedInputs->array)[0];
+    assignArgs(&args, parsedInputs);
+    printf("[after] %s\n", *args);
+    pid = fork();
+    if (pid == 0) {
+      printf("[child process] running command...\n");
+      //printf("[child process] args is: %s\n", *args); 
+      processCommand(command, args);   
+      _exit(EXIT_SUCCESS);
+    } else {
+      wait(NULL);
+      printf("[parent process] child completed!\n");
+    }
+  }
 
   freeStringArray(parsedInputs);
   free(parsedInputs);
