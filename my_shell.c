@@ -6,6 +6,7 @@
 #define TRUE 1
 #define STDIN_READ_COUNT 1024
 #define PARSED_INPUT_INITIAL_SIZE 4
+#define CWD_SIZE 1024
 #define EXIT_COMMAND "exit"
 
 typedef struct {
@@ -88,17 +89,19 @@ void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
   } 
 }
 
-void processCommand(char* command, char** args) {
-  printf("command: %s\n", command);
+void invokeProgram(char** args) {
+  if (args == NULL) return;
+  char* command = args[0];
+  printf("command is: %s\n", command);
+  char** tmp = args;
   printf("args: \n");
-  if (args != NULL) {
-    while (*args != NULL) {
-      printf("   - %s\n", *args);
-      args++;
+  if (tmp != NULL) {
+    while (*tmp != NULL) {
+      printf("   - %s\n", *tmp);
+      tmp++;
     }
   }
-  printf("\n\n");
-
+  execvp(args[0], args);
 }
 
 int main() {
@@ -108,11 +111,13 @@ int main() {
   StringArray* parsedInputs = malloc(sizeof(StringArray));
   char* command;
   char** args;
+  char cwd[CWD_SIZE];
 
-  while (TRUE) { 
+  while (TRUE) {
     input = malloc(STDIN_READ_COUNT);
     initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
-    printf(">> ");
+    getcwd(cwd, sizeof(cwd));
+    printf("%s>> ", cwd);
     readInput(stdin, input); 
     parseInput(input, parsedInputs);
     command = (parsedInputs->array)[0];
@@ -120,12 +125,12 @@ int main() {
     assignArgs(&args, parsedInputs); 
     pid = fork();
     if (pid == 0) {
-      printf("[child process] running command...\n"); 
-      processCommand(command, args);   
+      //printf("[child process] running command...\n"); 
+      invokeProgram(parsedInputs->array);   
       _exit(EXIT_SUCCESS);
     } else {
       wait(NULL);
-      printf("[parent process] child completed!\n");
+      //printf("[parent process] child completed!\n");
     }
   }
 
