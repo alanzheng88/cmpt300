@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -20,7 +21,7 @@ typedef struct {
 void initStringArray(StringArray *a, size_t initialSize) {
   a->array = malloc(initialSize * sizeof(char*));
   if (a->array == NULL) {
-    printf("Failed to allocate memory in initStringArray");
+    printf("Failed to allocate memory in initStringArray\n");
     exit(EXIT_FAILURE);
   }
   a->used = 0;
@@ -78,7 +79,7 @@ void parseInput(char* input, StringArray* parsedInputs) {
 }
 
 void checkExitStatus(char* input) {
-  if (strcmp(input, EXIT_COMMAND) == 0) {
+  if (input && (strcmp(input, EXIT_COMMAND) == 0)) {
     exit(0);
   }
 }
@@ -91,19 +92,25 @@ void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
   } 
 }
 
+// returns 1 if command is change directory, 0 otherwise
 int changeDir(char* command, char** args) {
-  if (strcmp(command, CD_COMMAND) == 0) {
+  int status;
+  if (command && (strcmp(command, CD_COMMAND) == 0)) {
     if (args && args[0]) {
-      chdir(args[0]);
-      return TRUE;
-    }
-    
+      status = chdir(args[0]);
+      if (status == 0) {
+        return TRUE;
+      } else {
+        fprintf(stderr, "cd: %s: %s\n", args[0], strerror(errno));
+      }
+    } 
   }
   return FALSE;
 }
 
 void invokeProgram(char** args) {
   if (args == NULL) return;
+  /*
   char* command = args[0];
   printf("command is: %s\n", command);
   char** tmp = args;
@@ -114,7 +121,9 @@ void invokeProgram(char** args) {
       tmp++;
     }
   }
+  */
   execvp(args[0], args);
+  fprintf(stderr, "%s: command not found\n", args[0]);
 }
 
 int main() {
@@ -131,11 +140,11 @@ int main() {
     initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
-    readInput(stdin, input); 
-    parseInput(input, parsedInputs);
-    command = (parsedInputs->array)[0];
+    readInput(stdin, input);
+    parseInput(input, parsedInputs); 
+    command = (parsedInputs->array)[0]; 
     checkExitStatus(command);
-    assignArgs(&args, parsedInputs);
+    assignArgs(&args, parsedInputs); 
     if (changeDir(command, args)) { continue; }
     pid = fork();
     if (pid == 0) {
