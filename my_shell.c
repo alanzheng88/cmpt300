@@ -4,10 +4,12 @@
 #include <unistd.h>
 
 #define TRUE 1
+#define FALSE 0
 #define STDIN_READ_COUNT 1024
 #define PARSED_INPUT_INITIAL_SIZE 4
 #define CWD_SIZE 1024
 #define EXIT_COMMAND "exit"
+#define CD_COMMAND "cd"
 
 typedef struct {
   char** array;
@@ -89,6 +91,17 @@ void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
   } 
 }
 
+int changeDir(char* command, char** args) {
+  if (strcmp(command, CD_COMMAND) == 0) {
+    if (args && args[0]) {
+      chdir(args[0]);
+      return TRUE;
+    }
+    
+  }
+  return FALSE;
+}
+
 void invokeProgram(char** args) {
   if (args == NULL) return;
   char* command = args[0];
@@ -122,7 +135,8 @@ int main() {
     parseInput(input, parsedInputs);
     command = (parsedInputs->array)[0];
     checkExitStatus(command);
-    assignArgs(&args, parsedInputs); 
+    assignArgs(&args, parsedInputs);
+    if (changeDir(command, args)) { continue; }
     pid = fork();
     if (pid == 0) {
       //printf("[child process] running command...\n"); 
