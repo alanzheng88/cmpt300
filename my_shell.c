@@ -48,6 +48,7 @@ void insertStringArray(StringArray *a, char* stringToInsert) {
   }
   a->array[a->used] = malloc(strlen(stringToInsert) * sizeof(char*));
   strcpy(a->array[a->used++], stringToInsert);
+  a->array[a->used] = NULL;
 }
 
 void freeStringArray(StringArray *a) {
@@ -210,13 +211,13 @@ int main() {
     }
     pid = fork();
     if (pid == 0) {
-      printf("[child process] running command...\n"); 
+      //printf("[child process] running command...\n"); 
       invokeProgram(parsedInputs->array);   
       _exit(EXIT_SUCCESS);
     } else {
       wait(NULL);
       freeStringArray(parsedInputs); 
-      printf("[parent process] child completed!\n");
+      //printf("[parent process] child completed!\n");
     }
   }
 
