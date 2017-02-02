@@ -8,9 +8,11 @@
 #define FALSE 0
 #define STDIN_READ_COUNT 1024
 #define PARSED_INPUT_INITIAL_SIZE 4
+#define HISTORY_INITIAL_SIZE 4
 #define CWD_SIZE 1024
 #define EXIT_COMMAND "exit"
 #define CD_COMMAND "cd"
+#define HISTORY_COMMAND "history"
 
 typedef struct {
   char** array;
@@ -50,16 +52,21 @@ void freeStringArray(StringArray *a) {
   a->size = 0;
 }
 
-// helper functions
 void readInput(FILE* stream, char* buffer) {
   if (stream == stdin) {
     fgets(buffer, STDIN_READ_COUNT, stream);
   }
 }
 
+void saveHistory(StringArray* history, char* input) {
+  insertStringArray(history, input);
+}
+
 // see: http://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input
 void stripLinefeed(char* str) {
-  str[strcspn(str, "\r\n")] = '\0';
+  if (str) {
+    str[strcspn(str, "\r\n")] = '\0';
+  }
 }
 
 void parseInput(char* input, StringArray* parsedInputs) {
@@ -68,7 +75,6 @@ void parseInput(char* input, StringArray* parsedInputs) {
   char* str = input;
   char* delimiter = " "; 
 
-  stripLinefeed(input);
   do {
     token = strtok_r(str, delimiter, &str);
     if (token == NULL) break;
@@ -92,7 +98,7 @@ void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
   } 
 }
 
-// returns 1 if command is change directory, 0 otherwise
+// returns 1 if command is to change directory, 0 otherwise
 int changeDir(char* command, char** args) {
   int status;
   if (command && (strcmp(command, CD_COMMAND) == 0)) {
@@ -106,6 +112,19 @@ int changeDir(char* command, char** args) {
     } 
   }
   return FALSE;
+}
+
+// returns 1 if command is to show history, 0 otherwise
+int showHistory(char* command, char**args, StringArray* history) {
+  if (command && (strcmp(command, HISTORY_COMMAND) == 0)) {
+    char** ptr = history->array;
+    int count = 1;
+    while (ptr && *ptr) {
+      printf("  %d  %s\n", count++, *(ptr++));  
+    }
+    return 1;
+  }
+  return 0;
 }
 
 void invokeProgram(char** args) {
@@ -130,22 +149,30 @@ int main() {
   pid_t pid;
   FILE* stream;
   char* input; 
-  StringArray* parsedInputs = malloc(sizeof(StringArray));
+  StringArray* parsedInputs;
   char* command;
   char** args;
   char cwd[CWD_SIZE];
+  StringArray* history;
+
+  parsedInputs = malloc(sizeof(StringArray));
+  history = malloc(sizeof(StringArray));
+  initStringArray(history, HISTORY_INITIAL_SIZE);
 
   while (TRUE) {
-    input = malloc(STDIN_READ_COUNT);
     initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
+    input = malloc(STDIN_READ_COUNT);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
     readInput(stdin, input);
-    parseInput(input, parsedInputs); 
-    command = (parsedInputs->array)[0]; 
+    stripLinefeed(input);
+    saveHistory(history, input);
+    parseInput(input, parsedInputs);
+    command = (parsedInputs->array)[0];
     checkExitStatus(command);
     assignArgs(&args, parsedInputs); 
     if (changeDir(command, args)) { continue; }
+    if (showHistory(command, args, history)) { continue; }
     pid = fork();
     if (pid == 0) {
       //printf("[child process] running command...\n"); 
@@ -153,12 +180,14 @@ int main() {
       _exit(EXIT_SUCCESS);
     } else {
       wait(NULL);
+      freeStringArray(parsedInputs); 
       //printf("[parent process] child completed!\n");
     }
   }
 
-  freeStringArray(parsedInputs);
+  freeStringArray(history);
   free(parsedInputs);
+  free(history);
   free(input);
 
   return 0;
