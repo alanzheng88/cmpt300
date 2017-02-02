@@ -18,9 +18,11 @@
 #define STDIN_READ_COUNT 1024
 #define PARSED_INPUT_INITIAL_SIZE 4
 #define HISTORY_INITIAL_SIZE 4
+#define LAST_X_HISTORY 10
 #define CWD_SIZE 1024
 #define EXIT_COMMAND "exit"
 #define CD_COMMAND "cd"
+#define PWD_COMMAND "pwd"
 #define HISTORY_COMMAND "history"
 
 typedef struct {
@@ -51,7 +53,7 @@ void insertStringArray(StringArray *a, char* stringToInsert) {
 void freeStringArray(StringArray *a) {
   if (!a) { return; }
   char** head = a->array;
-  while ((head != NULL) && (*head != NULL)) { 
+  while (head && *head) { 
     free(*head);
     *head = NULL;
     head++;
@@ -66,6 +68,7 @@ void readInput(FILE* stream, char* buffer) {
   if (stream == stdin) {
     fgets(buffer, STDIN_READ_COUNT, stream);
   }
+  buffer[strlen(buffer)] = '\0';
 }
 
 void saveHistory(StringArray* history, char* input) {
@@ -128,23 +131,41 @@ int changeDir(char* command, char** args) {
 }
 
 // returns 1 if command is to show history, 0 otherwise
-int showHistory(char* command, char**args, StringArray* history) {
+int showHistory(char* command, char** args, StringArray* history) {
+  char **ptr;
+  int index;
+  int count = 0;
   if (command && (strcmp(command, HISTORY_COMMAND) == 0)) {
-    char** ptr = history->array;
-    int count = 1;
-    while (ptr && *ptr) {
-      printf("  %d  %s\n", count++, *(ptr++));  
+    ptr = history->array;
+    if (history->used >= LAST_X_HISTORY) {
+      index = history->used - LAST_X_HISTORY;
+      ptr += index;
+      count += index;
     }
-    return 1;
+    while (ptr && *ptr) {
+      printf("  %d  %s\n", ++count, *(ptr++));  
+    }
+    return TRUE;
   }
-  return 0;
+  return FALSE;
+}
+
+// returns 1 if command is to show current working dir, 0 otherwise
+int displayCurrentWorkingDir(char* command, char* cwd) {
+  if (command && (strcmp(command, PWD_COMMAND) == 0)) {
+    printf("%s\n", cwd);
+    return TRUE;
+  }
+  return FALSE;
 }
 
 void invokeProgram(char** args) {
-  if (args == NULL) return;
-  /*
-  char* command = args[0];
-  printf("command is: %s\n", command);
+  if (args == NULL) return; 
+  execvp(args[0], args);
+  fprintf(stderr, "%s: command not found\n", args[0]);
+}
+
+void debug(char** args) {
   char** tmp = args;
   printf("args: \n");
   if (tmp != NULL) {
@@ -153,9 +174,6 @@ void invokeProgram(char** args) {
       tmp++;
     }
   }
-  */
-  execvp(args[0], args);
-  fprintf(stderr, "%s: command not found\n", args[0]);
 }
 
 int main() {
@@ -183,21 +201,22 @@ int main() {
     parseInput(input, parsedInputs);
     command = (parsedInputs->array)[0];
     checkExitStatus(command);
-    assignArgs(&args, parsedInputs); 
+    assignArgs(&args, parsedInputs);
     if (changeDir(command, args) || 
-        showHistory(command, args, history)) {
+          showHistory(command, args, history) ||
+          displayCurrentWorkingDir(command, cwd)) {
       freeStringArray(parsedInputs);
       continue; 
     }
     pid = fork();
     if (pid == 0) {
-      //printf("[child process] running command...\n"); 
+      printf("[child process] running command...\n"); 
       invokeProgram(parsedInputs->array);   
       _exit(EXIT_SUCCESS);
     } else {
       wait(NULL);
       freeStringArray(parsedInputs); 
-      //printf("[parent process] child completed!\n");
+      printf("[parent process] child completed!\n");
     }
   }
 
