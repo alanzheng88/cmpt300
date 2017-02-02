@@ -49,6 +49,7 @@ void insertStringArray(StringArray *a, char* stringToInsert) {
 }
 
 void freeStringArray(StringArray *a) {
+  if (!a) { return; }
   char** head = a->array;
   while ((head != NULL) && (*head != NULL)) { 
     free(*head);
@@ -167,13 +168,13 @@ int main() {
   char cwd[CWD_SIZE];
   StringArray* history;
 
+  input = malloc(STDIN_READ_COUNT);
   parsedInputs = malloc(sizeof(StringArray));
   history = malloc(sizeof(StringArray));
   initStringArray(history, HISTORY_INITIAL_SIZE);
 
   while (TRUE) {
     initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
-    input = malloc(STDIN_READ_COUNT);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
     readInput(stdin, input);
