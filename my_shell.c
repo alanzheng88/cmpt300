@@ -1,3 +1,12 @@
+/*
+  Author: Alan Zheng
+  Date: February 1, 2017
+*/
+
+/*
+  [fix] enter internal command, enter alot of spaces -> program crashes
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,6 +111,9 @@ void assignArgs(char*** argsPtr, StringArray* parsedInputs) {
 int changeDir(char* command, char** args) {
   int status;
   if (command && (strcmp(command, CD_COMMAND) == 0)) {
+    if (!args) {
+      return TRUE;
+    }
     if (args && args[0]) {
       status = chdir(args[0]);
       if (status == 0) {
@@ -171,8 +183,11 @@ int main() {
     command = (parsedInputs->array)[0];
     checkExitStatus(command);
     assignArgs(&args, parsedInputs); 
-    if (changeDir(command, args)) { continue; }
-    if (showHistory(command, args, history)) { continue; }
+    if (changeDir(command, args) || 
+        showHistory(command, args, history)) {
+      freeStringArray(parsedInputs);
+      continue; 
+    }
     pid = fork();
     if (pid == 0) {
       //printf("[child process] running command...\n"); 
@@ -186,8 +201,8 @@ int main() {
   }
 
   freeStringArray(history);
-  free(parsedInputs);
   free(history);
+  free(parsedInputs);
   free(input);
 
   return 0;
