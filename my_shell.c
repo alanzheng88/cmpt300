@@ -1,6 +1,6 @@
 /*
   Author: Alan Zheng
-  Date: February 1, 2017
+  Date: February 6, 2017
 */
 
 /*
@@ -30,6 +30,74 @@ typedef struct {
   size_t used;
   size_t size;
 } StringArray;
+
+void initStringArray(StringArray *a, size_t initialSize);
+void insertStringArray(StringArray *a, char* stringToInsert);
+void freeStringArray(StringArray *a);
+void readInput(FILE* stream, char* buffer);
+void saveHistory(StringArray* history, char* input);
+void stripLinefeed(char* str);
+void parseInput(char* input, StringArray* parsedInputs);
+void checkExitStatus(char* input);
+void assignArgs(char*** argsPtr, StringArray* parsedInputs);
+int changeDir(char* command, char** args);
+int showHistory(char* command, char** args, StringArray* history);
+int displayCurrentWorkingDir(char* command, char* cwd);
+void invokeProgram(char** args);
+void debug(char** args);
+
+int main() {
+  pid_t pid;
+  FILE* stream;
+  char* input; 
+  StringArray* parsedInputs;
+  char* command;
+  char** args;
+  char cwd[CWD_SIZE];
+  StringArray* history;
+
+  input = malloc(STDIN_READ_COUNT);
+  parsedInputs = malloc(sizeof(StringArray));
+  history = malloc(sizeof(StringArray));
+  initStringArray(history, HISTORY_INITIAL_SIZE);
+
+  while (TRUE) {
+    initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
+    getcwd(cwd, sizeof(cwd));
+    printf("%s>> ", cwd);
+    readInput(stdin, input);
+    stripLinefeed(input);
+    saveHistory(history, input);
+    parseInput(input, parsedInputs);
+    command = (parsedInputs->array)[0];
+    checkExitStatus(command);
+    assignArgs(&args, parsedInputs);
+    if (changeDir(command, args) || 
+          showHistory(command, args, history) ||
+          displayCurrentWorkingDir(command, cwd)) {
+      freeStringArray(parsedInputs);
+      continue; 
+    }
+    pid = fork();
+    if (pid == 0) {
+      //printf("[child process] running command...\n"); 
+      invokeProgram(parsedInputs->array);   
+      _exit(EXIT_SUCCESS);
+    } else {
+      wait(NULL);
+      freeStringArray(parsedInputs); 
+      //printf("[parent process] child completed!\n");
+    }
+  }
+
+  freeStringArray(history);
+  free(history);
+  free(parsedInputs);
+  free(input);
+
+  return 0;
+}
+
 
 void initStringArray(StringArray *a, size_t initialSize) {
   a->array = malloc(initialSize * sizeof(char*));
@@ -175,56 +243,4 @@ void debug(char** args) {
       tmp++;
     }
   }
-}
-
-int main() {
-  pid_t pid;
-  FILE* stream;
-  char* input; 
-  StringArray* parsedInputs;
-  char* command;
-  char** args;
-  char cwd[CWD_SIZE];
-  StringArray* history;
-
-  input = malloc(STDIN_READ_COUNT);
-  parsedInputs = malloc(sizeof(StringArray));
-  history = malloc(sizeof(StringArray));
-  initStringArray(history, HISTORY_INITIAL_SIZE);
-
-  while (TRUE) {
-    initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
-    getcwd(cwd, sizeof(cwd));
-    printf("%s>> ", cwd);
-    readInput(stdin, input);
-    stripLinefeed(input);
-    saveHistory(history, input);
-    parseInput(input, parsedInputs);
-    command = (parsedInputs->array)[0];
-    checkExitStatus(command);
-    assignArgs(&args, parsedInputs);
-    if (changeDir(command, args) || 
-          showHistory(command, args, history) ||
-          displayCurrentWorkingDir(command, cwd)) {
-      freeStringArray(parsedInputs);
-      continue; 
-    }
-    pid = fork();
-    if (pid == 0) {
-      //printf("[child process] running command...\n"); 
-      invokeProgram(parsedInputs->array);   
-      _exit(EXIT_SUCCESS);
-    } else {
-      wait(NULL);
-      freeStringArray(parsedInputs); 
-      //printf("[parent process] child completed!\n");
-    }
-  }
-
-  freeStringArray(history);
-  free(history);
-  free(parsedInputs);
-  free(input);
-
-  return 0;
 }
