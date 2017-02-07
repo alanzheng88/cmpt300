@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <ctype.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -43,7 +44,7 @@ void readInput(FILE* stream, char* buffer);
 void saveHistory(StringArray* history, char* input);
 void stripLinefeed(char* str);
 char* trim(char* str);
-void parseInput(char* input, StringArray* parsedInputs, char* delimiter);
+void parseInputs(char* input, StringArray* parsedInputs, char* delimiter);
 void checkExitStatus(char* input);
 void assignArgs(char*** argsPtr, StringArray* parsedInputs);
 int changeDir(char* command, char** args);
@@ -83,7 +84,7 @@ int main() {
     stripLinefeed(input);
     saveHistory(history, input);
     getPipedInputs(input, pipedInputs);
-    parseInput(input, parsedInputs, " ");
+    parseInputs(input, parsedInputs, " ");
     command = (parsedInputs->array)[0];
     checkExitStatus(command);
     assignArgs(&args, parsedInputs);
@@ -149,9 +150,12 @@ void insertStringArray(StringArray *a, char* stringToInsert) {
 
 void trimStringArray(StringArray *a) {
   char** ptr = a->array;
-  while (ptr && *ptr) {
-    strcpy(*ptr, trim(*ptr));
+  size_t len = a->used;
+  size_t count = 0;
+  while (count < len) {
+    trim(*ptr);
     ptr++;
+    count++;
   }
 }
 
@@ -226,7 +230,7 @@ char* trim(char* str) {
   return str;
 }
 
-void parseInput(char* input, StringArray* parsedInputs, char* delimiter) {
+void parseInputs(char* input, StringArray* parsedInputs, char* delimiter) {
   char** ptr = parsedInputs->array;
   char* token;
   char* str = input;
@@ -311,7 +315,7 @@ void invokeProgram(char** args) {
 }
 
 void getPipedInputs(char* input, StringArray* pipedInputs) {
-  parseInput(input, pipedInputs, "|");
+  parseInputs(input, pipedInputs, "|");
   //debug(pipedInputs->array);
 }
 
