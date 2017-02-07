@@ -4,7 +4,8 @@
 */
 
 /*
-  [fix] enter internal command, enter alot of spaces -> program crashes
+  TODO:
+    ->
 */
 
 #include <stdio.h>
@@ -12,11 +13,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #define TRUE 1
 #define FALSE 0
 #define STDIN_READ_COUNT 1024
-#define PARSED_INPUT_INITIAL_SIZE 4
+#define PARSED_INPUTS_INITIAL_SIZE 4
+#define PIPED_INPUTS_INITIAL_SIZE 4
 #define HISTORY_INITIAL_SIZE 4
 #define LAST_X_HISTORY 10
 #define CWD_SIZE 1024
@@ -31,44 +34,56 @@ typedef struct {
   size_t size;
 } StringArray;
 
+void sighandler(int signum);
 void initStringArray(StringArray *a, size_t initialSize);
 void insertStringArray(StringArray *a, char* stringToInsert);
+void trimStringArray(StringArray *a);
 void freeStringArray(StringArray *a);
 void readInput(FILE* stream, char* buffer);
 void saveHistory(StringArray* history, char* input);
 void stripLinefeed(char* str);
-void parseInput(char* input, StringArray* parsedInputs);
+char* trim(char* str);
+void parseInput(char* input, StringArray* parsedInputs, char* delimiter);
 void checkExitStatus(char* input);
 void assignArgs(char*** argsPtr, StringArray* parsedInputs);
 int changeDir(char* command, char** args);
 int showHistory(char* command, char** args, StringArray* history);
 int displayCurrentWorkingDir(char* command, char* cwd);
 void invokeProgram(char** args);
+void getPipedInputs(char* input, StringArray* pipedInputs);
+
+// helpers for debugging
 void debug(char** args);
 
 int main() {
+  signal(SIGINT, sighandler);
+
   pid_t pid;
   FILE* stream;
   char* input; 
   StringArray* parsedInputs;
+  StringArray* pipedInputs;
+  StringArray* history;
   char* command;
   char** args;
   char cwd[CWD_SIZE];
-  StringArray* history;
 
   input = malloc(STDIN_READ_COUNT);
   parsedInputs = malloc(sizeof(StringArray));
+  pipedInputs = malloc(sizeof(StringArray));
   history = malloc(sizeof(StringArray));
   initStringArray(history, HISTORY_INITIAL_SIZE);
 
   while (TRUE) {
-    initStringArray(parsedInputs, PARSED_INPUT_INITIAL_SIZE);
+    initStringArray(parsedInputs, PARSED_INPUTS_INITIAL_SIZE);
+    initStringArray(pipedInputs, PIPED_INPUTS_INITIAL_SIZE);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
     readInput(stdin, input);
     stripLinefeed(input);
     saveHistory(history, input);
-    parseInput(input, parsedInputs);
+    getPipedInputs(input, pipedInputs);
+    parseInput(input, parsedInputs, " ");
     command = (parsedInputs->array)[0];
     checkExitStatus(command);
     assignArgs(&args, parsedInputs);
@@ -76,28 +91,41 @@ int main() {
           showHistory(command, args, history) ||
           displayCurrentWorkingDir(command, cwd)) {
       freeStringArray(parsedInputs);
-      continue; 
+      freeStringArray(pipedInputs);
+      continue;
     }
-    pid = fork();
-    if (pid == 0) {
-      //printf("[child process] running command...\n"); 
-      invokeProgram(parsedInputs->array);   
-      _exit(EXIT_SUCCESS);
+    if (pipedInputs->used > 1) {
+      // handle inputs with pipes
+
+      freeStringArray(parsedInputs);
+      freeStringArray(pipedInputs);
     } else {
-      wait(NULL);
-      freeStringArray(parsedInputs); 
-      //printf("[parent process] child completed!\n");
+      // handle inputs with no pipes
+      pid = fork();
+      if (pid == 0) {
+        //printf("[child process] running command...\n"); 
+        invokeProgram(parsedInputs->array);   
+        _exit(EXIT_SUCCESS);
+      } else {
+        wait(NULL);
+        freeStringArray(parsedInputs); 
+        freeStringArray(pipedInputs);
+        //printf("[parent process] child completed!\n");
+      }
     }
   }
 
   freeStringArray(history);
   free(history);
   free(parsedInputs);
+  free(pipedInputs);
   free(input);
 
   return 0;
 }
 
+
+void sighandler(int signum) {}
 
 void initStringArray(StringArray *a, size_t initialSize) {
   a->array = malloc(initialSize * sizeof(char*));
@@ -114,18 +142,29 @@ void insertStringArray(StringArray *a, char* stringToInsert) {
     a->size *= 2;
     a->array = realloc(a->array, a->size * sizeof(char*)); 
   }
-  a->array[a->used] = malloc(strlen(stringToInsert) * sizeof(char*));
+  a->array[a->used] = malloc((strlen(stringToInsert) + 1) * sizeof(char));
   strcpy(a->array[a->used++], stringToInsert);
   a->array[a->used] = NULL;
 }
 
+void trimStringArray(StringArray *a) {
+  char** ptr = a->array;
+  while (ptr && *ptr) {
+    strcpy(*ptr, trim(*ptr));
+    ptr++;
+  }
+}
+
 void freeStringArray(StringArray *a) {
   if (!a) { return; }
-  char** head = a->array;
-  while (head && *head) { 
-    free(*head);
-    *head = NULL;
-    head++;
+  char** ptr = a->array;
+  size_t count = 0;
+  size_t len = a->used;
+  while (count < len) {  
+    free(*ptr);
+    *ptr = NULL;
+    ptr++;
+    count++;
   }
   free(a->array);
   a->array = NULL;
@@ -151,19 +190,56 @@ void stripLinefeed(char* str) {
   }
 }
 
-void parseInput(char* input, StringArray* parsedInputs) {
+// see: http://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
+char* trim(char* str) {
+  size_t len = 0;
+  char *frontPtr = str;
+  char *endPtr = NULL;
+
+  if (str == NULL) { return NULL; }
+  if (*str == '\0') { return str; }
+
+  len = strlen(str);
+  endPtr = str + len;
+
+  while (isspace(*frontPtr)) { frontPtr++; }
+  if (endPtr != frontPtr) {
+    while ( (isspace(*endPtr)) && (endPtr != frontPtr) ) { endPtr--; }
+    // endPtr points to last character - index: n-1
+  }
+
+  // there is whitespace at the end so need to change location of \0
+  if (str + len - 1 != endPtr) {
+    *(endPtr + 1) = '\0';
+  }
+
+  // reusing pointer to point at front of the string buffer
+  endPtr = str;
+  if (frontPtr != str) {
+    while (*frontPtr) {
+      *endPtr = *frontPtr;
+      endPtr++;
+      frontPtr++;
+    }
+    *endPtr = '\0';
+  }
+  return str;
+}
+
+void parseInput(char* input, StringArray* parsedInputs, char* delimiter) {
   char** ptr = parsedInputs->array;
   char* token;
   char* str = input;
-  char* delimiter = " "; 
 
   do {
     token = strtok_r(str, delimiter, &str);
-    if (token == NULL) break;
+    if (token == NULL) break; 
     //printf("token (%s) length: %ld\n", token, strlen(token));
     insertStringArray(parsedInputs, token);
     ptr++;  
   } while (token != NULL);
+
+  trimStringArray(parsedInputs);
 }
 
 void checkExitStatus(char* input) {
@@ -232,6 +308,11 @@ void invokeProgram(char** args) {
   if (args == NULL) return; 
   execvp(args[0], args);
   fprintf(stderr, "%s: command not found\n", args[0]);
+}
+
+void getPipedInputs(char* input, StringArray* pipedInputs) {
+  parseInput(input, pipedInputs, "|");
+  //debug(pipedInputs->array);
 }
 
 void debug(char** args) {
