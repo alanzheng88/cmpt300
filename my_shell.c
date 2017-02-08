@@ -35,11 +35,20 @@ typedef struct {
   size_t size;
 } StringArray;
 
+typedef struct {
+  StringArray* array;
+  size_t used;
+  size_t size;
+} PipedInputs;
+
 void sighandler(int signum);
 void initStringArray(StringArray *a, size_t initialSize);
 void insertStringArray(StringArray *a, char* stringToInsert);
 void trimStringArray(StringArray *a);
 void freeStringArray(StringArray *a);
+void initPipedInputs(PipedInputs *a, size_t initialSize);
+void insertPipedInputs(PipedInputs *a, StringArray pipedInputToInsert);
+void freePipedInputs(PipedInputs *a);
 void readInput(FILE* stream, char* buffer);
 void saveHistory(StringArray* history, char* input);
 void stripLinefeed(char* str);
@@ -51,7 +60,8 @@ int changeDir(char* command, char** args);
 int showHistory(char* command, char** args, StringArray* history);
 int displayCurrentWorkingDir(char* command, char* cwd);
 void invokeProgram(char** args);
-void getPipedInputs(char* input, StringArray* pipedInputs);
+void invokeProgramWithPipedInputs(PipedInputs* pipedInputs);
+void getPipedInputs(char* input, PipedInputs* pipedInputs);
 
 // helpers for debugging
 void debug(char** args);
@@ -63,8 +73,8 @@ int main() {
   FILE* stream;
   char* input; 
   StringArray* parsedInputs;
-  StringArray* pipedInputs;
   StringArray* history;
+  PipedInputs* pipedInputs;
   char* command;
   char** args;
   char cwd[CWD_SIZE];
@@ -77,7 +87,6 @@ int main() {
 
   while (TRUE) {
     initStringArray(parsedInputs, PARSED_INPUTS_INITIAL_SIZE);
-    initStringArray(pipedInputs, PIPED_INPUTS_INITIAL_SIZE);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
     readInput(stdin, input);
@@ -92,14 +101,12 @@ int main() {
           showHistory(command, args, history) ||
           displayCurrentWorkingDir(command, cwd)) {
       freeStringArray(parsedInputs);
-      freeStringArray(pipedInputs);
       continue;
     }
     if (pipedInputs->used > 1) {
       // handle inputs with pipes
-
+      invokeProgramWithPipedInputs(pipedInputs);
       freeStringArray(parsedInputs);
-      freeStringArray(pipedInputs);
     } else {
       // handle inputs with no pipes
       pid = fork();
@@ -110,7 +117,6 @@ int main() {
       } else {
         wait(NULL);
         freeStringArray(parsedInputs); 
-        freeStringArray(pipedInputs);
         //printf("[parent process] child completed!\n");
       }
     }
@@ -119,7 +125,6 @@ int main() {
   freeStringArray(history);
   free(history);
   free(parsedInputs);
-  free(pipedInputs);
   free(input);
 
   return 0;
@@ -314,8 +319,34 @@ void invokeProgram(char** args) {
   fprintf(stderr, "%s: command not found\n", args[0]);
 }
 
-void getPipedInputs(char* input, StringArray* pipedInputs) {
-  parseInputs(input, pipedInputs, "|");
+void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) {
+  printf("invoking program with piped inputs!\n");
+  
+  /*
+  pid_t pid;
+  int pipefd[2];
+  int pipeStatus = pipe(pipefd);
+  if (pipeStatus == -1) {
+    perror("pipe");
+    return;
+  }
+  pid = fork();
+  if (pid == -1) {
+    perror("fork");
+    return;
+  } else if (pid == 0) {
+    // writing to pipe in child process
+    dup2(pipefd[1], 1);
+    close(pipefd[0]); // close unused reading end
+
+    invokeProgram( 
+  } else {
+
+  }*/
+}
+
+void getPipedInputs(char* input, PipedInputs* pipedInputs) {
+  //parseInputs(input, pipedInputs, "|");
   //debug(pipedInputs->array);
 }
 
