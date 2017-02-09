@@ -65,6 +65,7 @@ void getPipedInputs(char* input, PipedInputs* pipedInputs);
 
 // helpers for debugging
 void debug(char** args);
+void debugPipedInputs(PipedInputs* pipedInputs);
 
 int main() {
   signal(SIGINT, sighandler);
@@ -116,7 +117,7 @@ int main() {
         //printf("[child process] running command...\n"); 
         invokeProgram(parsedInputs->array);   
         _exit(EXIT_SUCCESS);
-      } else {
+      } else { 
         wait(NULL);
         freeStringArray(parsedInputs); 
         //printf("[parent process] child completed!\n");
@@ -358,7 +359,58 @@ void invokeProgram(char** args) {
 
 void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) {
   printf("invoking program with piped inputs!\n");
-  
+  debugPipedInputs(pipedInputs);
+
+  StringArray** pipedInputsArr = pipedInputs->array;
+  char** firstCommand = pipedInputsArr[0]->array;
+  char** secondCommand = pipedInputsArr[1]->array;
+  //char** thirdCommand = pipedInputsArr[2]->array;
+
+  pid_t pid;
+  int pipes[2]; 
+
+  pipe(pipes);
+  printf("pipes: [%d] [%d]\n", pipes[0], pipes[1]);
+
+  pid = fork();
+  if (pid == 0) {
+    close(STDOUT_FILENO);
+    dup2(pipes[1], STDOUT_FILENO);
+    close(pipes[0]);
+    close(pipes[1]);
+    invokeProgram(firstCommand); 
+  }
+  int lastPipesR = pipes[0];
+  pid = fork();
+  //pipe(pipes);
+  printf("pipes: [%d] [%d]\n", pipes[0], pipes[1]);
+  if (pid == 0) {
+    close(STDIN_FILENO); 
+    dup2(lastPipesR, STDIN_FILENO);
+  //  close(STDOUT_FILENO);
+  //  dup2(pipes[1], STDOUT_FILENO);
+    close(lastPipesR);
+    close(pipes[0]);
+    close(pipes[1]);
+    invokeProgram(secondCommand);
+  }
+/*
+  lastPipesR = pipes[0];
+  lastPipesW = pipes[1];
+  pid = fork();
+  if (pid == 0) {
+    close(STDIN_FILENO);
+    dup2(lastPipesR, STDIN_FILENO);
+    close(lastPipesR);
+    close(lastPipesW);
+    close(pipes[0]);
+    close(pipes[1]);
+    invokeProgram(thirdCommand);
+  }*/
+
+
+  wait(NULL);
+
   /*
   pid_t pid;
   int pipefd[2];
@@ -395,12 +447,12 @@ void getPipedInputs(char* input, PipedInputs* pipedInputs) {
   while (count < len) {
     pipedInput = malloc(sizeof(StringArray));
     initStringArray(pipedInput, PARSED_INPUTS_INITIAL_SIZE);
-    printf("parsing: %s\n", parsedInputsArr[count]);
+    //printf("parsing: %s\n", parsedInputsArr[count]);
     parseInputs(parsedInputsArr[count], pipedInput, " ");
-    printf("inserting the following into pipedInputs:\n");
-    debug(pipedInput->array);
+    //printf("inserting the following into pipedInputs:\n");
+    //debug(pipedInput->array);
     insertPipedInputs(pipedInputs, pipedInput);
-    printf("count: %ld\n", count);
+    //printf("count: %ld\n", count);
     count++;
   }
   //debug(pipedInputs->array);
@@ -416,5 +468,15 @@ void debug(char** args) {
       printf("   - %s\n", *tmp);
       tmp++;
     }
+  }
+}
+
+void debugPipedInputs(PipedInputs* pipedInputs) {
+  StringArray** tmp = pipedInputs->array;
+  size_t len = pipedInputs->used;
+  size_t count = 0;
+  while (count < len) {
+    printf("\ncount: %ld\n", count);
+    debug(tmp[count++]->array);
   }
 }
