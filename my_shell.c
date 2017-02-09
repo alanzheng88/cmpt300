@@ -36,7 +36,7 @@ typedef struct {
 } StringArray;
 
 typedef struct {
-  StringArray* array;
+  StringArray** array;
   size_t used;
   size_t size;
 } PipedInputs;
@@ -47,7 +47,7 @@ void insertStringArray(StringArray *a, char* stringToInsert);
 void trimStringArray(StringArray *a);
 void freeStringArray(StringArray *a);
 void initPipedInputs(PipedInputs *a, size_t initialSize);
-void insertPipedInputs(PipedInputs *a, StringArray pipedInputToInsert);
+void insertPipedInputs(PipedInputs *a, StringArray* pipedInputToInsert);
 void freePipedInputs(PipedInputs *a);
 void readInput(FILE* stream, char* buffer);
 void saveHistory(StringArray* history, char* input);
@@ -87,6 +87,7 @@ int main() {
 
   while (TRUE) {
     initStringArray(parsedInputs, PARSED_INPUTS_INITIAL_SIZE);
+    initPipedInputs(pipedInputs, PIPED_INPUTS_INITIAL_SIZE);
     getcwd(cwd, sizeof(cwd));
     printf("%s>> ", cwd);
     readInput(stdin, input);
@@ -106,6 +107,7 @@ int main() {
     if (pipedInputs->used > 1) {
       // handle inputs with pipes
       invokeProgramWithPipedInputs(pipedInputs);
+      freePipedInputs(pipedInputs);
       freeStringArray(parsedInputs);
     } else {
       // handle inputs with no pipes
@@ -181,6 +183,39 @@ void freeStringArray(StringArray *a) {
   a->size = 0;
 }
 
+void initPipedInputs(PipedInputs *a, size_t initialSize) {
+  a->array = malloc(initialSize * sizeof(StringArray*));
+  a->used = 0;
+  a->size = initialSize;
+}
+
+void insertPipedInputs(PipedInputs *a, StringArray* pipedInputToInsert) {
+  if (a->used == a->size) {
+    a->size *= 2;
+    a->array = realloc(a->array, a->size * sizeof(StringArray*));
+  }
+  a->array[a->used] = malloc(sizeof(StringArray));
+  a->array[a->used++] = pipedInputToInsert; 
+}
+
+void freePipedInputs(PipedInputs *a) {
+  if (!a) { return; }
+  StringArray** ptr = a->array;
+  size_t count = 0;
+  size_t len = a->used;
+  while (count < len) {
+    freeStringArray(*ptr);
+    free(*ptr);
+    *ptr = NULL;
+    ptr++;
+    count++;
+  }
+  free(a->array);
+  a->array = NULL;
+  a->used = 0;
+  a->size = 0;
+}
+
 void readInput(FILE* stream, char* buffer) {
   if (stream == stdin) {
     fgets(buffer, STDIN_READ_COUNT, stream);
@@ -192,7 +227,6 @@ void saveHistory(StringArray* history, char* input) {
   insertStringArray(history, input);
 }
 
-// see: http://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input
 void stripLinefeed(char* str) {
   if (str) {
     str[strcspn(str, "\r\n")] = '\0';
@@ -201,9 +235,9 @@ void stripLinefeed(char* str) {
 
 // see: http://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
 char* trim(char* str) {
-  size_t len = 0;
   char *frontPtr = str;
   char *endPtr = NULL;
+  size_t len = 0;
 
   if (str == NULL) { return NULL; }
   if (*str == '\0') { return str; }
@@ -217,14 +251,17 @@ char* trim(char* str) {
     // endPtr points to last character - index: n-1
   }
 
-  // there is whitespace at the end so need to change location of \0
-  if (str + len - 1 != endPtr) {
+  if ((str + len - 1) != endPtr) {
+    // there is whitespace at the end so need to change location of \0
     *(endPtr + 1) = '\0';
+  } else if ((str != frontPtr) && (endPtr == frontPtr)) {
+    // bunch of empty spaces -> set first character to be \0
+    *str = '\0';
   }
 
   // reusing pointer to point at front of the string buffer
   endPtr = str;
-  if (frontPtr != str) {
+  if (str != frontPtr) {
     while (*frontPtr) {
       *endPtr = *frontPtr;
       endPtr++;
@@ -346,8 +383,29 @@ void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) {
 }
 
 void getPipedInputs(char* input, PipedInputs* pipedInputs) {
-  //parseInputs(input, pipedInputs, "|");
+  size_t len;
+  size_t count;
+  StringArray* pipedInput;
+  StringArray* parsedInputs = malloc(sizeof(StringArray));
+  initStringArray(parsedInputs, PARSED_INPUTS_INITIAL_SIZE);
+  parseInputs(input, parsedInputs, "|");
+  len = parsedInputs->used;
+  count = 0;
+  char** parsedInputsArr = parsedInputs->array;
+  while (count < len) {
+    pipedInput = malloc(sizeof(StringArray));
+    initStringArray(pipedInput, PARSED_INPUTS_INITIAL_SIZE);
+    printf("parsing: %s\n", parsedInputsArr[count]);
+    parseInputs(parsedInputsArr[count], pipedInput, " ");
+    printf("inserting the following into pipedInputs:\n");
+    debug(pipedInput->array);
+    insertPipedInputs(pipedInputs, pipedInput);
+    printf("count: %ld\n", count);
+    count++;
+  }
   //debug(pipedInputs->array);
+  freeStringArray(parsedInputs);
+  free(parsedInputs);
 }
 
 void debug(char** args) {
