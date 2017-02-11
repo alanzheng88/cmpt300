@@ -120,6 +120,7 @@ int main() {
         _exit(EXIT_SUCCESS);
       } else { 
         wait(NULL);
+        freePipedInputs(pipedInputs);
         freeStringArray(parsedInputs); 
         //printf("[parent process] child completed!\n");
       }
@@ -220,7 +221,10 @@ void freePipedInputs(PipedInputs *a) {
 
 void readInput(FILE* stream, char* buffer) {
   if (stream == stdin) {
-    fgets(buffer, STDIN_READ_COUNT, stream);
+    if (fgets(buffer, STDIN_READ_COUNT, stream) == NULL) {
+      printf("\n");
+      exit(0);
+    }
   }
   buffer[strlen(buffer)] = '\0';
 }
