@@ -370,6 +370,7 @@ void loopPipe(int pipesCount, StringArray** pipedCommands) {
     pipe(pipes[index]);
     pid = fork();
     if (pid == -1) {
+      perror("pipe");
       exit(EXIT_FAILURE);
     } else if (pid == 0) {
       if (index == 0) {
@@ -379,7 +380,7 @@ void loopPipe(int pipesCount, StringArray** pipedCommands) {
         close(pipes[index][0]);
         close(pipes[index][1]);
       } else if (index < pipesCount) {
-        // pipes[index][1] --> grep --> pipes[index+1][0]
+        // lastReadFd --> grep --> pipes[index][1]
         close(STDIN_FILENO); 
         dup2(lastReadFd, STDIN_FILENO);
         close(lastReadFd);
@@ -388,7 +389,7 @@ void loopPipe(int pipesCount, StringArray** pipedCommands) {
         close(pipes[index][0]);
         close(pipes[index][1]);
       } else {
-        // pipes[index+1][0] --> sort
+        // lastReadFd --> sort
         close(STDIN_FILENO);
         dup2(lastReadFd, STDIN_FILENO);
         close(lastReadFd);
@@ -399,6 +400,7 @@ void loopPipe(int pipesCount, StringArray** pipedCommands) {
       invokeProgram(pipedCommands[index]->array);
     } else {
       wait(NULL);
+      // pipes[index][0] = lastReadFd
       lastReadFd = dup(pipes[index][0]);
       close(pipes[index][0]);
       close(pipes[index][1]);
@@ -412,34 +414,10 @@ void loopPipe(int pipesCount, StringArray** pipedCommands) {
 }
 
 void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) { 
-  printf("invoking program with piped inputs!\n");
-  debugPipedInputs(pipedInputs);
-
+  //debugPipedInputs(pipedInputs);
   StringArray** pipedInputsArr = pipedInputs->array;
   int pipesCount = pipedInputs->used - 1;
   loopPipe(pipesCount, pipedInputsArr);
-
-  /*
-  pid_t pid;
-  int pipefd[2];
-  int pipeStatus = pipe(pipefd);
-  if (pipeStatus == -1) {
-    perror("pipe");
-    return;
-  }
-  pid = fork();
-  if (pid == -1) {
-    perror("fork");
-    return;
-  } else if (pid == 0) {
-    // writing to pipe in child process
-    dup2(pipefd[1], 1);
-    close(pipefd[0]); // close unused reading end
-
-    invokeProgram( 
-  } else {
-
-  }*/
 }
 
 void getPipedInputs(char* input, PipedInputs* pipedInputs) {
