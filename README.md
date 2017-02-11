@@ -1,7 +1,10 @@
-# Usage 
+# Shell (Alan Zheng)
 
-1. make
-2. make run
+## Usage 
+
+Run the following commands in terminal:
+- make
+- make run
 
 ## Features 
 
