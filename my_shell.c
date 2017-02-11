@@ -357,58 +357,71 @@ void invokeProgram(char** args) {
   fprintf(stderr, "%s: command not found\n", args[0]);
 }
 
-void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) {
+void invokeProgramWithPipedInputs(PipedInputs* pipedInputs) { 
   printf("invoking program with piped inputs!\n");
   debugPipedInputs(pipedInputs);
 
   StringArray** pipedInputsArr = pipedInputs->array;
   char** firstCommand = pipedInputsArr[0]->array;
   char** secondCommand = pipedInputsArr[1]->array;
-  //char** thirdCommand = pipedInputsArr[2]->array;
+  char** thirdCommand = pipedInputsArr[2]->array;
 
   pid_t pid;
-  int pipes[2]; 
-
-  pipe(pipes);
-  printf("pipes: [%d] [%d]\n", pipes[0], pipes[1]);
+  int savedStdout = dup(1);
+  int pipesCount = pipedInputs->used - 1;
+  int pipes[pipesCount][2]; 
+  
+  pipe(pipes[0]);
+  printf("pipes: [%d] [%d]\n", pipes[0][0], pipes[0][1]);
 
   pid = fork();
   if (pid == 0) {
+    // ls --> pipes[0][1]
     close(STDOUT_FILENO);
-    dup2(pipes[1], STDOUT_FILENO);
-    close(pipes[0]);
-    close(pipes[1]);
+    dup2(pipes[0][1], STDOUT_FILENO);
+    close(pipes[0][0]);
+    close(pipes[0][1]);
     invokeProgram(firstCommand); 
   }
-  int lastPipesR = pipes[0];
+
+
+  pipe(pipes[1]);
   pid = fork();
-  //pipe(pipes);
-  printf("pipes: [%d] [%d]\n", pipes[0], pipes[1]);
+  printf("pipes: [%d] [%d]\n", pipes[1][0], pipes[1][1]);
   if (pid == 0) {
+    // pipes[0][1] --> grep
     close(STDIN_FILENO); 
-    dup2(lastPipesR, STDIN_FILENO);
-  //  close(STDOUT_FILENO);
-  //  dup2(pipes[1], STDOUT_FILENO);
-    close(lastPipesR);
-    close(pipes[0]);
-    close(pipes[1]);
+    dup2(pipes[0][0], STDIN_FILENO);
+    close(pipes[0][0]);
+    close(pipes[0][1]);
+    close(STDOUT_FILENO);
+    dup2(pipes[1][1], STDOUT_FILENO);
+    close(pipes[1][0]);
+    close(pipes[1][1]);
     invokeProgram(secondCommand);
   }
-/*
-  lastPipesR = pipes[0];
-  lastPipesW = pipes[1];
+  
+  close(pipes[0][0]);
+  close(pipes[0][1]);
+
+
   pid = fork();
   if (pid == 0) {
     close(STDIN_FILENO);
-    dup2(lastPipesR, STDIN_FILENO);
-    close(lastPipesR);
-    close(lastPipesW);
-    close(pipes[0]);
-    close(pipes[1]);
+    dup2(pipes[1][0], STDIN_FILENO);
+    close(pipes[1][0]); 
+    close(pipes[1][1]);
     invokeProgram(thirdCommand);
-  }*/
+  }
 
+  close(pipes[1][0]);
+  close(pipes[1][1]);
+ 
+  dup2(savedStdout, STDOUT_FILENO);
+  close(savedStdout);
 
+  wait(NULL);
+  wait(NULL);
   wait(NULL);
 
   /*
