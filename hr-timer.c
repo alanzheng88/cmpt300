@@ -42,7 +42,7 @@ unsigned long long result; //64 bit integer
 // retrieve the start time with the clock for CLOCK_REALTIME
 clock_gettime(CLOCK_REALTIME, &start);
 // sleep for 1 second
-sleep(1);
+sleep(2);
 // retrieve the stop time with the clock for CLOCK_REALTIME
 clock_gettime(CLOCK_REALTIME, &stop);
 // compute the elapsed time between start and stop time for the clock CLOCK_REALTIME
