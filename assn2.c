@@ -1,9 +1,11 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <time.h>
 #include <unistd.h>
+#include <sched.h>
 
 #define ONE_BILLION 1000000000
 #define ONE_HUNDRED_MILLION 100000000
@@ -14,11 +16,17 @@ unsigned long long measureMinFcnCall(int n);
 void minFcnCall();
 unsigned long long measureMinSystemCall(int n);
 unsigned long long measureProcessSwitching(int n);
+unsigned long long measureThreadSwitching(int n);
 
 int main() {
-  unsigned long long result;
+  // http://stackoverflow.com/questions/10490756/how-to-use-sched-getaffinity2-and-sched-setaffinity2-please-give-code-samp
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  CPU_SET(0, &set);
+  sched_setaffinity(0, sizeof(cpu_set_t), &set);
 
-/*
+  unsigned long long result;
+  /*
   // question 2: measure cost of minimal function call
   result = measureMinFcnCall(ONE_HUNDRED_MILLION);
   print("cost of minimal function call", result);
@@ -151,6 +159,23 @@ unsigned long long measureProcessSwitching(int n) {
   }
 
   result = timespecDiff(&startTime, &endTime);
-    
+
   return result / ( (2 * n) - 1 );
+}
+
+unsigned long long measureThreadSwitching(int n) {  
+  struct timespec startTime;
+  struct timespec endTime;
+  unsigned long long result = 0;
+
+  int i = 0;
+  while (i < n) {
+    clock_gettime(CLOCK_MONOTONIC, &startTime);
+    
+    clock_gettime(CLOCK_MONOTONIC, &endTime);
+    result += timespecDiff(&startTime, &endTime);
+    i++;
+  }
+
+  return result / n;
 }
