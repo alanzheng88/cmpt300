@@ -8,13 +8,14 @@
 #include <sched.h>
 
 #define ONE_BILLION 1000000000
-#define ONE_HUNDRED_MILLION 100000000
+#define A_THOUSAND 1000
 
 unsigned long long timespecDiff(struct timespec *timeA_p, struct timespec *timeB_p);
+void printDetailed(char* message, unsigned long long result, unsigned long long arr[], int n);
 void print(char* message, unsigned long long result);
-unsigned long long measureMinFcnCall(int n);
+unsigned long long measureMinFcnCall(int n, unsigned long long arr[]);
 void minFcnCall();
-unsigned long long measureMinSystemCall(int n);
+unsigned long long measureMinSystemCall(int n, unsigned long long arr[]);
 unsigned long long measureProcessSwitching(int n);
 unsigned long long measureThreadSwitching(int n);
 
@@ -25,18 +26,28 @@ int main() {
   CPU_SET(0, &set);
   sched_setaffinity(0, sizeof(cpu_set_t), &set);
 
+  int n = 20;
+  unsigned long long minFcnCallResult[n];
+  unsigned long long minSystemCallResult[n];
+  unsigned long long processSwitchingResult[n];
+  unsigned long long threadSwitchingResult[n];
   unsigned long long result;
-  /*
+  int i = 0;
+  
   // question 2: measure cost of minimal function call
-  result = measureMinFcnCall(ONE_HUNDRED_MILLION);
-  print("cost of minimal function call", result);
+  result = measureMinFcnCall(n, minFcnCallResult);
+  printDetailed("cost of minimal function call", result, minFcnCallResult, n);
   // question 3: measure cost of minimal system call
-  result = measureMinSystemCall(ONE_HUNDRED_MILLION);
-  print("cost of minimal system call", result);
-  */
+  result = measureMinSystemCall(n, minSystemCallResult);
+  printDetailed("cost of minimal system call", result, minSystemCallResult, n);
+  
   // question 4: measure cost of process switching
-  result = measureProcessSwitching(2);
-  print("cost of process switching", result);
+  while (i < n) {
+    result = measureProcessSwitching(i+1);
+    processSwitchingResult[i] = result;
+    i++;
+  }
+  printDetailed("cost of process switching", result, processSwitchingResult, n);
 
   return 0;
 }
@@ -47,19 +58,28 @@ unsigned long long timespecDiff(struct timespec *timeA_p, struct timespec *timeB
   //printf("timeA_p->tv_nsec: %llu\n", (long long unsigned) timeA_p->tv_nsec);
   //printf("timeB_p->tv_sec: %llu\n", (long long unsigned)timeB_p->tv_sec);
   //printf("timeB_p->tv_nsec: %llu\n", (long long unsigned)timeB_p->tv_nsec);
-  return abs(((timeA_p->tv_sec * ONE_BILLION) + timeA_p->tv_nsec) -
-                ((timeB_p->tv_sec * ONE_BILLION) + timeB_p->tv_nsec));
+  return ((timeA_p->tv_sec * ONE_BILLION) + timeA_p->tv_nsec) -
+                ((timeB_p->tv_sec * ONE_BILLION) + timeB_p->tv_nsec);
 }
 
-void print(char* message, unsigned long long result) { 
-  unsigned long long s = result / ONE_BILLION;
-  unsigned long long ms = result % ONE_BILLION;
-  printf("%s: %llus %llums\n", message, s, ms);
+void printDetailed(char* message, unsigned long long result, 
+           unsigned long long arr[], int n) {  
+  int i = 0;
+  while (i < n) {
+    (i == (n-1)) ? printf("%llu", arr[i]) : printf("%llu, ", arr[i]);
+    i++;
+  }
+  printf("\n%s: %lluns\n\n", message, result);
 }
 
-unsigned long long measureMinFcnCall(int n) {
+void print(char* message, unsigned long long result) {
+  printf("%s: %lluns\n", message, result);
+}
+
+unsigned long long measureMinFcnCall(int n, unsigned long long arr[]) {
   struct timespec startTime;
   struct timespec endTime;
+  unsigned long long diff = 0;
   unsigned long long result = 0;
 
   int i = 0;
@@ -67,7 +87,9 @@ unsigned long long measureMinFcnCall(int n) {
     clock_gettime(CLOCK_MONOTONIC, &startTime);
     minFcnCall();
     clock_gettime(CLOCK_MONOTONIC, &endTime);
-    result += timespecDiff(&startTime, &endTime);
+    diff = timespecDiff(&endTime, &startTime);
+    arr[i] = diff;
+    result += diff;
     i++;
   }
 
@@ -76,9 +98,10 @@ unsigned long long measureMinFcnCall(int n) {
 
 void minFcnCall() {}
 
-unsigned long long measureMinSystemCall(int n) {
+unsigned long long measureMinSystemCall(int n, unsigned long long arr[]) {
   struct timespec startTime;
   struct timespec endTime;
+  unsigned long long diff = 0;
   unsigned long long result = 0;
 
   int i = 0;
@@ -86,7 +109,9 @@ unsigned long long measureMinSystemCall(int n) {
     clock_gettime(CLOCK_MONOTONIC, &startTime);
     getpid();
     clock_gettime(CLOCK_MONOTONIC, &endTime);
-    result += timespecDiff(&startTime, &endTime);
+    diff = timespecDiff(&endTime, &startTime);
+    arr[i] = diff;
+    result += diff;
     i++;
   }
 
@@ -158,7 +183,7 @@ unsigned long long measureProcessSwitching(int n) {
     close(pipe2[0]);
   }
 
-  result = timespecDiff(&startTime, &endTime);
+  result = timespecDiff(&endTime, &startTime);
 
   return result / ( (2 * n) - 1 );
 }
@@ -173,7 +198,7 @@ unsigned long long measureThreadSwitching(int n) {
     clock_gettime(CLOCK_MONOTONIC, &startTime);
     
     clock_gettime(CLOCK_MONOTONIC, &endTime);
-    result += timespecDiff(&startTime, &endTime);
+    result += timespecDiff(&endTime, &startTime);
     i++;
   }
 
