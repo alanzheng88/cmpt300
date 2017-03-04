@@ -6,6 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sched.h>
+#include <pthread.h>
 
 #define ONE_BILLION 1000000000
 #define A_THOUSAND 1000
@@ -18,6 +19,16 @@ void minFcnCall();
 unsigned long long measureMinSystemCall(int n, unsigned long long arr[]);
 unsigned long long measureProcessSwitching(int n);
 unsigned long long measureThreadSwitching(int n);
+void *thread1();
+void *thread2();
+
+
+// global variables
+pthread_t t[2];
+int sharedInt = 0;
+pthread_mutex_t mutex;
+pthread_cond_t hasSetOne = PTHREAD_COND_INITIALIZER;
+pthread_cond_t hasSetZero = PTHREAD_COND_INITIALIZER;
 
 int main() {
   // http://stackoverflow.com/questions/10490756/how-to-use-sched-getaffinity2-and-sched-setaffinity2-please-give-code-samp
@@ -49,6 +60,11 @@ int main() {
   }
   printDetailed("cost of process switching", result, processSwitchingResult, n);
 
+  // question 5: measure thread switching
+  result = measureThreadSwitching(1);
+  threadSwitchingResult[i] = result;
+  printf("hi");
+  print("cost of thread switching", result);
   return 0;
 }
 
@@ -196,11 +212,37 @@ unsigned long long measureThreadSwitching(int n) {
   int i = 0;
   while (i < n) {
     clock_gettime(CLOCK_MONOTONIC, &startTime);
-    
+    pthread_mutex_init(&mutex, NULL);
+    pthread_create(&t[1], NULL, thread2, NULL);
+    pthread_create(&t[0], NULL, thread1, NULL);
+    pthread_exit(NULL); 
     clock_gettime(CLOCK_MONOTONIC, &endTime);
     result += timespecDiff(&endTime, &startTime);
     i++;
   }
-
+ 
   return result / n;
 }
+
+void *thread1() {
+  pthread_mutex_lock(&mutex);
+  while (sharedInt == 0) {
+    pthread_cond_wait(&hasSetZero, &mutex);
+    sharedInt = 1;
+  }
+  pthread_mutex_unlock(&mutex);
+  pthread_cond_signal(&hasSetOne);
+  return NULL;
+}
+
+void *thread2() {
+  pthread_mutex_lock(&mutex);
+  while (sharedInt == 1) { 
+    pthread_cond_wait(&hasSetOne, &mutex);
+  }
+  sharedInt = 0;
+  pthread_mutex_unlock(&mutex);
+  pthread_cond_signal(&hasSetZero);
+  return NULL;
+}
+

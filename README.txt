@@ -4,6 +4,7 @@ Compilation Instructions:
   2. make run
 Note:
   The results below are in nanoseconds. The first number (e.g: 366 of minimal function call) is the result of the first execution of the loop. The second number (e.g: 96 of minimal function call) is the result of the second execution of the loop.. etc
+  Also, I tried getting threads to work but timer isn't working.
 
 
 366, 96, 90, 95, 95, 90, 90, 85, 90, 86, 95, 91, 90, 91, 90, 85, 90, 85, 95, 90
