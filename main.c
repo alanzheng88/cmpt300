@@ -13,28 +13,26 @@ void *fnC()
 }
 
 
-pthread_mutex_t count_mutex;
-
-
 void *pthreadMutexTest()
 {
-	
+	pthread_mutex_t count_mutex;
+
     int i;
 	int j;
 	int k;
 	
 	int localCount = 0;
 	
-    for(i=0;i<numItterations;i++)
+    for(i = 0; i < numItterations; i++)
     {
 		
-		for(j=0;j<workOutsideCS;j++)/*How much work is done outside the CS*/
+		for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
 		{
 			localCount++;
 		}
 		
 		pthread_mutex_lock(&count_mutex);
-		for(k=0;k<workInsideCS;k++)/*How much work is done inside the CS*/
+		for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
 		{
 			c++;
 		}
@@ -45,57 +43,185 @@ void *pthreadMutexTest()
     pthread_exit(NULL);
 }
 
-int runTest(int testID)
+void *spinLockTest()
 {
+	pthread_spinlock_t spinlock;
 
-/*You must create all data structures and threads for you experiments*/
+    int i;
+	int j;
+	int k;
+	
+	int localCount = 0;
+	
+	pthread_spin_init(&spinlock, PTHREAD_PROCESS_SHARED);
 
-if (testID == 0 || testID == 1 ) /*Pthread Mutex*/
+    for(i = 0; i < numItterations; i++)
+    {
+		
+		for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
+		{
+			localCount++;
+		}
+		
+		spinlock_lockTTAS(&spinlock);
+		for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
+		{
+			c++;
+		}
+		pthread_spin_unlock(&spinlock);    
+	
+    }
+
+    pthread_exit(NULL);
+}
+
+void *mySpinLockTASTest()
 {
-	c=0;
+	my_spinlock_t spinlock;
+	
+    int i;
+	int j;
+	int k;
+	
+	int localCount = 0;
+	
+	my_spinlock_init(&spinlock);
+
+    for(i = 0; i < numItterations; i++)
+    {
+		
+		for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
+		{
+			localCount++;
+		}
+		
+		my_spinlock_lockTAS(&spinlock);
+		for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
+		{
+			c++;
+		}
+		my_spinlock_unlock(&spinlock);    
+	
+    }
+
+    my_spinlock_destroy(&spinlock);
+
+    pthread_exit(NULL);
+}
+
+void *mySpinLockTTASTest()
+{
+	my_spinlock_t spinlock;
+
+    int i;
+	int j;
+	int k;
+	
+	int localCount = 0;
+	
+	my_spinlock_init(&spinlock);
+
+    for(i = 0; i < numItterations; i++)
+    {
+		
+		for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
+		{
+			localCount++;
+		}
+		
+		my_spinlock_lockTTAS(&spinlock);
+		for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
+		{
+			c++;
+		}
+		my_spinlock_unlock(&spinlock);    
+	
+    }   
+
+    pthread_exit(NULL);
+}
+
+
+
+int runTestWithPthread(char* testName, void *(*f)(void*)) 
+{
+	c = 0;
 	struct timespec start;
 	struct timespec stop;
 	unsigned long long result; //64 bit integer
 
-	pthread_t *threads = (pthread_t* )malloc(sizeof(pthread_t)*numThreads);	
+	pthread_t *threads = (pthread_t*)malloc(sizeof(pthread_t)*numThreads);	
 	int i;
 	int rt;
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
-	for(i=0;i<numThreads;i++)
+	for(i = 0; i < numThreads; i++)
 	{
-	
-	 if( (rt=(pthread_create( threads+i, NULL, &pthreadMutexTest, NULL)) ) )
-	{
-		printf("Thread creation failed: %d\n", rt);
-		return -1;	
+		if ( (rt = (pthread_create(threads+i, NULL, f, NULL))) )
+		{
+			printf("Thread creation failed: %d\n", rt);
+			return -1;	
+		}
 	}
 	
-	}
-	
-	for(i=0;i<numThreads;i++) //Wait for all threads to finish
+	for(i = 0; i < numThreads; i++) //Wait for all threads to finish
 	{
 		 pthread_join(threads[i], NULL);
 	}
 	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	printf("Threaded Run Pthread (Mutex) Total Count: %lld\n", c);
+	printf("Threaded Run Pthread (%s) Total Count: %lld\n", testName, c);
 	result=timespecDiff(&stop,&start);
-	printf("Pthread Mutex time(ms): %llu\n",result/1000000);
-
+	printf("Pthread %s time(ms): %llu\n", testName, result/1000000);
+	return 0;
 }
 
-if(testID == 0 || testID == 2) /*Pthread Spinlock*/
+int runTest(int testID)
 {
-/*Pthread Spinlock goes here*/
-}
 
-if(testID == 0 || testID == 3) /*MySpinlockTAS*/
-{
-/* mySpinlock TAS goes here*/
-}
+	/*You must create all data structures and threads for you experiments*/
 
-/*....you must implement the other tests....*/
+	// Pthread Mutex
+	if (testID == 0 || testID == 1)
+	{
+		runTestWithPthread("Mutex", &pthreadMutexTest);
+
+	}
+
+	// Pthread Spinlock
+	if(testID == 0 || testID == 2) 
+	{
+		/* Pthread Spinlock goes here */
+		runTestWithPthread("Professional Spinlock TTAS", &spinLockTest);
+	}
+
+ 	// MySpinlock TAS
+	if(testID == 0 || testID == 3)
+	{
+		printf("\nStart MySpinlock TAS test\n");
+		runTestWithPthread("MySpinlock TAS", &mySpinLockTASTest);
+		printf("Finish MySpinlock TAS test\n\n");
+	}
+
+	// MySpinlock TTAS
+	if (testID == 0 || testID == 4)
+	{
+		printf("\nStart MySpinlock TTAS test\n");
+		runTestWithPthread("MySpinlock TTAS", &mySpinLockTTASTest);
+		printf("Finish MySpinlock TTAS test\n\n");
+	}
+
+	// MyMutex TAS
+	if (testID == 0 || testID == 5)
+	{
+
+	}
+
+	// MyQueueLock
+	if (testID == 0 || testID == 6)
+	{
+
+	}
 
 	return 0;
 }
@@ -112,7 +238,7 @@ int testAndSetExample()
 int processInput(int argc, char *argv[])
 {
 
-/*testid: 0=all, 1=pthreadMutex, 2=pthreadSpinlock, 3=mySpinLockTAS, 4=mySpinLockTTAS, 5=myMutexTAS, 6=myQueueLock*/
+	/*testid: 0=all, 1=pthreadMutex, 2=pthreadSpinlock, 3=mySpinLockTAS, 4=mySpinLockTTAS, 5=myMutexTAS, 6=myQueueLock*/
 	/*You must write how to parse input from the command line here, your software should default to the values given below if no input is given*/
 	
 	numThreads=4;
@@ -129,6 +255,7 @@ int processInput(int argc, char *argv[])
 	int flagIntValue;
 
 	i = 1;
+	isValid = 1;
 	while (i < argc) {
 		flagInput = argv[i];
 
@@ -147,25 +274,25 @@ int processInput(int argc, char *argv[])
 		}
 		if (!isValid) {
 			printf("Requires a valid input for the flag %s\n", flagInput);
-			break;
+			return -1;
 		}
 
 		flagIntValue = atoi(flagValue);
 
 		if (strcmp("-t", flagInput) == 0) {
-			printf("flag is -t | value is: %s\n", flagValue);
+			printf("\tDEBUG - flag is -t | value is: %s\n", flagValue);
 			numThreads = flagIntValue;
 		} else if (strcmp("-i", flagInput) == 0) {
-			printf("flag is -i | value is: %s\n", flagValue);
+			printf("\tDEBUG - flag is -i | value is: %s\n", flagValue);
 			numItterations = flagIntValue;
 		} else if (strcmp("-o", flagInput) == 0) {
-			printf("flag is -o | value is: %s\n", flagValue);
+			printf("\tDEBUG - flag is -o | value is: %s\n", flagValue);
 			workOutsideCS = flagIntValue;
 		} else if (strcmp("-c", flagInput) == 0) {
-			printf("flag is -c | value is: %s\n", flagValue);
+			printf("\tDEBUG - flag is -c | value is: %s\n", flagValue);
 			workInsideCS = flagIntValue;
 		} else if (strcmp("-d", flagInput) == 0) {
-			printf("flag is -d | value is: %s\n", flagValue);
+			printf("\tDEBUG - flag is -d | value is: %s\n", flagValue);
 			testID = flagIntValue;
 		}
 
@@ -177,14 +304,15 @@ int processInput(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-
+	int status;
 
 	printf("Usage of: %s -t #threads -i #Itterations -o #OperationsOutsideCS -c #OperationsInsideCS -d testid\n", argv[0]);
 	printf("testid: 0=all, 1=pthreadMutex, 2=pthreadSpinlock, 3=mySpinLockTAS, 4=mySpinLockTTAS, 5=myMutexTAS, 6=myQueueLock, \n");	
 	
 	//testAndSetExample(); //Uncomment this line to see how to use TAS
 	
-	processInput(argc,argv);
+	status = processInput(argc,argv);
+	if (status != 0) return 1;
 	runTest(testID);
 	return 0;
 

@@ -4,7 +4,7 @@
 
 static inline unsigned long tas(volatile unsigned long* ptr)//Test and Set
 {
-return __sync_lock_test_and_set(ptr, 1);
+	return __sync_lock_test_and_set(ptr, 1);
 }
 
 

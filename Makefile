@@ -7,4 +7,4 @@ mylocks: $(OBJECTS)
 clean:
 	rm -f mylocks $(OBJECTS) 
 run: mylocks
-	./mylocks
+	./mylocks ${ARGS}

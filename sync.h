@@ -11,14 +11,10 @@
 #include "atomic_ops.h"
 
 struct my_mutex_struct {
-  /* FILL ME IN! */
+	volatile unsigned long i;
 };
 
-
-
-
 typedef struct my_mutex_struct my_mutex_t;
-
 
 int my_mutex_init(my_mutex_t *lock);
 int my_mutex_unlock(my_mutex_t *lock);
@@ -27,12 +23,13 @@ int my_mutex_destroy(my_mutex_t *lock);
 int my_mutex_lock(my_mutex_t *lock);
 int my_mutex_trylock(my_mutex_t *lock);
 
-
+/*Professional Spinlock*/
+int spinlock_lock(pthread_spinlock_t *lock);
 
 /*Spinlock Starts here*/
 
 struct my_spinlock_struct {
-  /* FILL ME IN! */
+	volatile unsigned long i;
 };
 
 typedef struct my_spinlock_struct my_spinlock_t;
