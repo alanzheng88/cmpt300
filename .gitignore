@@ -1,2 +1,4 @@
 a3.pdf
 .DS_Store
+mylocks
+*.o
