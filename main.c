@@ -8,6 +8,8 @@ void *fnC()
     {   
         c++;
     }   
+
+    pthread_exit(NULL);
 }
 
 
@@ -40,7 +42,7 @@ void *pthreadMutexTest()
 	
     }   
 
-
+    pthread_exit(NULL);
 }
 
 int runTest(int testID)
@@ -63,7 +65,7 @@ if (testID == 0 || testID == 1 ) /*Pthread Mutex*/
 	for(i=0;i<numThreads;i++)
 	{
 	
-	 if( rt=(pthread_create( threads+i, NULL, &pthreadMutexTest, NULL)) )
+	 if( (rt=(pthread_create( threads+i, NULL, &pthreadMutexTest, NULL)) ) )
 	{
 		printf("Thread creation failed: %d\n", rt);
 		return -1;	
@@ -77,7 +79,7 @@ if (testID == 0 || testID == 1 ) /*Pthread Mutex*/
 	}
 	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	printf("Threaded Run Pthread (Mutex) Total Count: %d\n", c);
+	printf("Threaded Run Pthread (Mutex) Total Count: %lld\n", c);
 	result=timespecDiff(&stop,&start);
 	printf("Pthread Mutex time(ms): %llu\n",result/1000000);
 
@@ -100,10 +102,11 @@ if(testID == 0 || testID == 3) /*MySpinlockTAS*/
 
 int testAndSetExample()
 {
-volatile long test = 0; //Test is set to 0
-printf("Test before atomic OP:%d\n",test);
-tas(&test);
-printf("Test after atomic OP:%d\n",test);
+	volatile unsigned long test = 0; //Test is set to 0
+	printf("Test before atomic OP:%ld\n",test);
+	tas(&test);
+	printf("Test after atomic OP:%ld\n",test);
+	pthread_exit(NULL);
 }
 
 int processInput(int argc, char *argv[])
@@ -117,11 +120,60 @@ int processInput(int argc, char *argv[])
 	testID=0;
 	workOutsideCS=0;
 	workInsideCS=1;
-	
+
+	char* flagInput;
+	char* flagValue;
+	int i;
+	int j;
+	int isValid;
+	int flagIntValue;
+
+	i = 1;
+	while (i < argc) {
+		flagInput = argv[i];
+
+		flagValue = argv[i+1];
+
+		if (flagValue == NULL) {
+			isValid = 0;
+		} else {
+			isValid = 1;
+			for (j = 0; j < strlen(flagValue); j++) {
+				if (!isValid) break;
+				if (!isdigit(flagValue[j])) {
+					isValid = 0;
+				}
+			}	
+		}
+		if (!isValid) {
+			printf("Requires a valid input for the flag %s\n", flagInput);
+			break;
+		}
+
+		flagIntValue = atoi(flagValue);
+
+		if (strcmp("-t", flagInput) == 0) {
+			printf("flag is -t | value is: %s\n", flagValue);
+			numThreads = flagIntValue;
+		} else if (strcmp("-i", flagInput) == 0) {
+			printf("flag is -i | value is: %s\n", flagValue);
+			numItterations = flagIntValue;
+		} else if (strcmp("-o", flagInput) == 0) {
+			printf("flag is -o | value is: %s\n", flagValue);
+			workOutsideCS = flagIntValue;
+		} else if (strcmp("-c", flagInput) == 0) {
+			printf("flag is -c | value is: %s\n", flagValue);
+			workInsideCS = flagIntValue;
+		} else if (strcmp("-d", flagInput) == 0) {
+			printf("flag is -d | value is: %s\n", flagValue);
+			testID = flagIntValue;
+		}
+
+		i += 2;
+	}
 	
 	return 0;
 }
-
 
 int main(int argc, char *argv[])
 {
