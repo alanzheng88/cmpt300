@@ -1,6 +1,5 @@
 #include "main.h"
 
-
 void *fnC()
 {
     int i;
@@ -26,19 +25,17 @@ void *pthreadMutexTest()
     for(i = 0; i < numItterations; i++)
     {
 		
-		for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
-		{
-      printf("doing work outside crit section %d\n", j);
-			localCount++;
-		}
-		
-		pthread_mutex_lock(&count_mutex);
-		for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
-		{
-      printf("doing work inside crit section %d\n", k);
-			c++;
-		}
-		pthread_mutex_unlock(&count_mutex);    
+      for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
+      {
+        localCount++;
+      }
+      
+      pthread_mutex_lock(&count_mutex);
+      for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
+      {
+        c++;
+      }
+      pthread_mutex_unlock(&count_mutex);    
 	
     }   
 
@@ -55,40 +52,30 @@ void *spinLockTest()
 	
 	int localCount = 0;
 	
-	pthread_spin_init(&spinlock, PTHREAD_PROCESS_SHARED);
-
-  printf("initing pthread\n");
-    for(i = 0; i < numItterations; i++)
-    {
-		
-      printf("on iteration %d\n", i);
-      for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
-      {
-        printf("doing work outside crit section%d\n", j);
-        localCount++;
-      }
-      
-      while (1)
-      {
-        while (pthread_spin_trylock(&spinlock)) {}
-
-        if (!pthread_spin_lock(&spinlock))
-        {  
-          printf("moving to crit section\n");
-          break;
-        }
-      }
-
-      for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
-      {
-        printf("doing work inside crit section %d\n", k);
-        c++;
-      }
-      pthread_spin_unlock(&spinlock);
-
+	if (pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE) != 0)
+  {
+    printf("error occurred for pthread_spin_init\n");
+    return NULL; 
+  }
+  
+  for(i = 0; i < numItterations; i++)
+  {
+   
+    for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
+    { 
+      localCount++;
     }
+    
+    while (pthread_spin_lock(&spinlock));
+    for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
+    {
+      c++;
+    }
+    pthread_spin_unlock(&spinlock);
 
-    pthread_exit(NULL);
+  }
+
+  pthread_exit(NULL);
 }
 
 void *mySpinLockTASTest()
@@ -129,7 +116,7 @@ void *mySpinLockTTASTest()
 {
 	my_spinlock_t spinlock;
 
-    int i;
+  int i;
 	int j;
 	int k;
 	
@@ -137,24 +124,24 @@ void *mySpinLockTTASTest()
 	
 	my_spinlock_init(&spinlock);
 
-    for(i = 0; i < numItterations; i++)
+  for(i = 0; i < numItterations; i++)
+  {
+  
+    for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
     {
-		
-		for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
-		{
-			localCount++;
-		}
-		
-		my_spinlock_lockTTAS(&spinlock);
-		for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
-		{
-			c++;
-		}
-		my_spinlock_unlock(&spinlock);    
-	
-    }   
+      localCount++;
+    }
+    
+    my_spinlock_lockTTAS(&spinlock); 
+    for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
+    {
+      c++;
+    }
+    my_spinlock_unlock(&spinlock);    
+  
+  }   
 
-    pthread_exit(NULL);
+  pthread_exit(NULL);
 }
 
 
@@ -207,7 +194,9 @@ int runTest(int testID)
 	if(testID == 0 || testID == 2) 
 	{
 		/* Pthread Spinlock goes here */
-		//runTestWithPthread("Professional Spinlock TTAS", &spinLockTest);
+    printf("\nStart Professional Spinlock test\n");
+		runTestWithPthread("Professional Spinlock", &spinLockTest);
+    printf("Finish Professional Spinlock test\n\n");
 	}
 
  	// MySpinlock TAS
