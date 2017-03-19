@@ -17,7 +17,7 @@ void *pthreadMutexTest()
 {
 	pthread_mutex_t count_mutex;
 
-    int i;
+  int i;
 	int j;
 	int k;
 	
@@ -28,12 +28,14 @@ void *pthreadMutexTest()
 		
 		for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
 		{
+      printf("doing work outside crit section %d\n", j);
 			localCount++;
 		}
 		
 		pthread_mutex_lock(&count_mutex);
 		for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
 		{
+      printf("doing work inside crit section %d\n", k);
 			c++;
 		}
 		pthread_mutex_unlock(&count_mutex);    
@@ -47,7 +49,7 @@ void *spinLockTest()
 {
 	pthread_spinlock_t spinlock;
 
-    int i;
+  int i;
 	int j;
 	int k;
 	
@@ -55,21 +57,35 @@ void *spinLockTest()
 	
 	pthread_spin_init(&spinlock, PTHREAD_PROCESS_SHARED);
 
+  printf("initing pthread\n");
     for(i = 0; i < numItterations; i++)
     {
 		
-		for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
-		{
-			localCount++;
-		}
-		
-		spinlock_lockTTAS(&spinlock);
-		for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
-		{
-			c++;
-		}
-		pthread_spin_unlock(&spinlock);    
-	
+      printf("on iteration %d\n", i);
+      for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
+      {
+        printf("doing work outside crit section%d\n", j);
+        localCount++;
+      }
+      
+      while (1)
+      {
+        while (pthread_spin_trylock(&spinlock)) {}
+
+        if (!pthread_spin_lock(&spinlock))
+        {  
+          printf("moving to crit section\n");
+          break;
+        }
+      }
+
+      for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
+      {
+        printf("doing work inside crit section %d\n", k);
+        c++;
+      }
+      pthread_spin_unlock(&spinlock);
+
     }
 
     pthread_exit(NULL);
@@ -79,7 +95,7 @@ void *mySpinLockTASTest()
 {
 	my_spinlock_t spinlock;
 	
-    int i;
+  int i;
 	int j;
 	int k;
 	
@@ -87,8 +103,8 @@ void *mySpinLockTASTest()
 	
 	my_spinlock_init(&spinlock);
 
-    for(i = 0; i < numItterations; i++)
-    {
+  for(i = 0; i < numItterations; i++)
+  {
 		
 		for(j = 0; j < workOutsideCS; j++) /* How much work is done outside the CS */
 		{
@@ -102,11 +118,11 @@ void *mySpinLockTASTest()
 		}
 		my_spinlock_unlock(&spinlock);    
 	
-    }
+  }
 
-    my_spinlock_destroy(&spinlock);
+  my_spinlock_destroy(&spinlock);
 
-    pthread_exit(NULL);
+  pthread_exit(NULL);
 }
 
 void *mySpinLockTTASTest()
@@ -184,15 +200,14 @@ int runTest(int testID)
 	// Pthread Mutex
 	if (testID == 0 || testID == 1)
 	{
-		runTestWithPthread("Mutex", &pthreadMutexTest);
-
+		//runTestWithPthread("Mutex", &pthreadMutexTest);
 	}
 
 	// Pthread Spinlock
 	if(testID == 0 || testID == 2) 
 	{
 		/* Pthread Spinlock goes here */
-		runTestWithPthread("Professional Spinlock TTAS", &spinLockTest);
+		//runTestWithPthread("Professional Spinlock TTAS", &spinLockTest);
 	}
 
  	// MySpinlock TAS
@@ -304,6 +319,13 @@ int processInput(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+
+  // http://stackoverflow.com/questions/10490756/how-to-use-sched-getaffinity2-and-sched-setaffinity2-please-give-code-samp
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  CPU_SET(0, &set);
+  sched_setaffinity(0, sizeof(cpu_set_t), &set);
+
 	int status;
 
 	printf("Usage of: %s -t #threads -i #Itterations -o #OperationsOutsideCS -c #OperationsInsideCS -d testid\n", argv[0]);

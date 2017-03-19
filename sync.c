@@ -10,21 +10,6 @@
 
 #include "sync.h"
 
-
-/*
- * Pthread spin lock
- */
-
-int spinlock_lock(pthread_spinlock_t *lock) {
-	while (1) {
-		while (pthread_spin_trylock(lock)) { /* keep spinning */ }
-		if (!pthread_spin_lock(lock)) { 
-			return 0;
-		}
-	}
-}
-
-
 /*
  * Spinlock routines
  */
@@ -42,7 +27,7 @@ int my_spinlock_destroy(my_spinlock_t *lock)
 
 int my_spinlock_unlock(my_spinlock_t *lock)
 {
-	lock->i = 0;
+	unlock(&(lock->i));
 	return 0;
 }
 

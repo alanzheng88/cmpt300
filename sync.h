@@ -8,6 +8,7 @@
 #ifndef _my_SYNC1_H_
 #define _my_SYNC1_H_
 
+#include <pthread.h>
 #include "atomic_ops.h"
 
 struct my_mutex_struct {
@@ -22,9 +23,6 @@ int my_mutex_destroy(my_mutex_t *lock);
 
 int my_mutex_lock(my_mutex_t *lock);
 int my_mutex_trylock(my_mutex_t *lock);
-
-/*Professional Spinlock*/
-int spinlock_lock(pthread_spinlock_t *lock);
 
 /*Spinlock Starts here*/
 
