@@ -11,11 +11,8 @@ void *fnC()
     pthread_exit(NULL);
 }
 
-
 void *pthreadMutexTest()
 {
-	pthread_mutex_t count_mutex;
-
   int i;
 	int j;
 	int k;
@@ -44,15 +41,13 @@ void *pthreadMutexTest()
 
 void *spinLockTest()
 {
-	pthread_spinlock_t spinlock;
-
   int i;
 	int j;
 	int k;
 	
 	int localCount = 0;
 	
-	if (pthread_spin_init(&spinlock, PTHREAD_PROCESS_PRIVATE) != 0)
+	if (pthread_spin_init(&pSpinlock, PTHREAD_PROCESS_PRIVATE) != 0)
   {
     printf("error occurred for pthread_spin_init\n");
     return NULL; 
@@ -66,12 +61,12 @@ void *spinLockTest()
       localCount++;
     }
     
-    while (pthread_spin_lock(&spinlock));
+    while (pthread_spin_lock(&pSpinlock));
     for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
     {
       c++;
     }
-    pthread_spin_unlock(&spinlock);
+    pthread_spin_unlock(&pSpinlock);
 
   }
 
@@ -79,16 +74,14 @@ void *spinLockTest()
 }
 
 void *mySpinLockTASTest()
-{
-	my_spinlock_t spinlock;
-	
+{	
   int i;
 	int j;
 	int k;
 	
 	int localCount = 0;
 	
-	my_spinlock_init(&spinlock);
+	my_spinlock_init(&mSpinlock);
 
   for(i = 0; i < numItterations; i++)
   {
@@ -98,31 +91,29 @@ void *mySpinLockTASTest()
 			localCount++;
 		}
 		
-		my_spinlock_lockTAS(&spinlock);
+		my_spinlock_lockTAS(&mSpinlock);
 		for(k = 0; k < workInsideCS; k++) /* How much work is done inside the CS */
 		{
 			c++;
 		}
-		my_spinlock_unlock(&spinlock);    
+		my_spinlock_unlock(&mSpinlock);    
 	
   }
 
-  my_spinlock_destroy(&spinlock);
+  my_spinlock_destroy(&mSpinlock);
 
   pthread_exit(NULL);
 }
 
 void *mySpinLockTTASTest()
-{
-	my_spinlock_t spinlock;
-
+{	
   int i;
 	int j;
 	int k;
 	
 	int localCount = 0;
 	
-	my_spinlock_init(&spinlock);
+	my_spinlock_init(&mSpinlock);
 
   for(i = 0; i < numItterations; i++)
   {
@@ -132,12 +123,12 @@ void *mySpinLockTTASTest()
       localCount++;
     }
     
-    my_spinlock_lockTTAS(&spinlock); 
+    my_spinlock_lockTTAS(&mSpinlock); 
     for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
     {
       c++;
     }
-    my_spinlock_unlock(&spinlock);    
+    my_spinlock_unlock(&mSpinlock);    
   
   }   
 
@@ -187,7 +178,7 @@ int runTest(int testID)
 	// Pthread Mutex
 	if (testID == 0 || testID == 1)
 	{
-		//runTestWithPthread("Mutex", &pthreadMutexTest);
+		runTestWithPthread("Mutex", &pthreadMutexTest);
 	}
 
 	// Pthread Spinlock
@@ -308,12 +299,6 @@ int processInput(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-
-  // http://stackoverflow.com/questions/10490756/how-to-use-sched-getaffinity2-and-sched-setaffinity2-please-give-code-samp
-  cpu_set_t set;
-  CPU_ZERO(&set);
-  CPU_SET(0, &set);
-  sched_setaffinity(0, sizeof(cpu_set_t), &set);
 
 	int status;
 

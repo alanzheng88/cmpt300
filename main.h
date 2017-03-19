@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +20,9 @@ int numItterations;
 int workOutsideCS;
 int workInsideCS;
 int testID;
+pthread_mutex_t count_mutex;
+pthread_spinlock_t pSpinlock;
+my_spinlock_t mSpinlock;
 
 
 unsigned long long timespecDiff(struct timespec *timeA_p, struct timespec *timeB_p)
