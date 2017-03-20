@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
+#include <string.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -23,6 +23,7 @@ int testID;
 pthread_mutex_t count_mutex;
 pthread_spinlock_t pSpinlock;
 my_spinlock_t mSpinlock;
+my_mutex_t mMutexlock;
 
 
 unsigned long long timespecDiff(struct timespec *timeA_p, struct timespec *timeB_p)

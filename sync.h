@@ -9,10 +9,12 @@
 #define _my_SYNC1_H_
 
 #include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "atomic_ops.h"
 
 struct my_mutex_struct {
-	volatile unsigned long i;
+  volatile unsigned long i;
 };
 
 typedef struct my_mutex_struct my_mutex_t;

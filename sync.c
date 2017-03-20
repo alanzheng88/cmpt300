@@ -61,27 +61,38 @@ int my_spinlock_trylock(my_spinlock_t *lock)
 
 int my_mutex_init(my_mutex_t *lock)
 {
-	return -1;
+  lock->i = 0; 
+	return 0;
 }
 
 int my_mutex_destroy(my_mutex_t *lock)
 {
-	return -1;
+	return 0;
 }
 
 int my_mutex_unlock(my_mutex_t *lock)
 {
-	return -1;
+  unlock(&(lock->i));
+	return 0;
 }
 
 int my_mutex_lock(my_mutex_t *lock)
 {
-	return -1;
+  useconds_t delay = 0;
+  while (1) {
+    while (my_mutex_trylock(lock)) {
+      delay += rand() % 10 + 1;
+      usleep(delay);
+    }
+    if (!tas(&(lock->i))) {
+      return 0;
+    }
+  }
 }
 
 int my_mutex_trylock(my_mutex_t *lock)
 {
-	return -1;
+	return lock->i;
 }
 
 /*

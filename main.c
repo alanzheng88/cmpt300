@@ -135,7 +135,35 @@ void *mySpinLockTTASTest()
   pthread_exit(NULL);
 }
 
+void *myMutexTTASTest()
+{	
+  int i;
+	int j;
+	int k;
+	
+	int localCount = 0;
+	
+	my_mutex_init(&mMutexlock);
 
+  for(i = 0; i < numItterations; i++)
+  {
+  
+    for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
+    {
+      localCount++;
+    }
+    
+    my_mutex_lock(&mMutexlock); 
+    for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
+    {
+      c++;
+    }
+    my_mutex_unlock(&mMutexlock);    
+  
+  }   
+
+  pthread_exit(NULL);
+}
 
 int runTestWithPthread(char* testName, void *(*f)(void*)) 
 {
@@ -178,7 +206,9 @@ int runTest(int testID)
 	// Pthread Mutex
 	if (testID == 0 || testID == 1)
 	{
+    printf("\nStart Professional Mutexlock test\n");
 		runTestWithPthread("Mutex", &pthreadMutexTest);
+    printf("Finish Professional Mutexlock test\n\n");
 	}
 
 	// Pthread Spinlock
@@ -206,10 +236,12 @@ int runTest(int testID)
 		printf("Finish MySpinlock TTAS test\n\n");
 	}
 
-	// MyMutex TAS
+	// MyMutex TTAS
 	if (testID == 0 || testID == 5)
 	{
-
+    printf("Start MyMutex TTAS test\n");
+    runTestWithPthread("MyMutex TTAS test", &myMutexTTASTest);
+    printf("Finish MyMutex TTAS test\n\n");
 	}
 
 	// MyQueueLock
@@ -299,8 +331,10 @@ int processInput(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-
 	int status;
+
+  // for seeding random numbers
+  srand(time(NULL));
 
 	printf("Usage of: %s -t #threads -i #Itterations -o #OperationsOutsideCS -c #OperationsInsideCS -d testid\n", argv[0]);
 	printf("testid: 0=all, 1=pthreadMutex, 2=pthreadSpinlock, 3=mySpinLockTAS, 4=mySpinLockTTAS, 5=myMutexTAS, 6=myQueueLock, \n");	
