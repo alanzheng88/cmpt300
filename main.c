@@ -98,9 +98,7 @@ void *mySpinLockTASTest()
 		}
 		my_spinlock_unlock(&mSpinlock);    
 	
-  }
-
-  my_spinlock_destroy(&mSpinlock);
+  } 
 
   pthread_exit(NULL);
 }
@@ -165,6 +163,27 @@ void *myMutexTTASTest()
   pthread_exit(NULL);
 }
 
+void recursiveSpinLockTestFcn(int n) {
+  int pid = pthread_self();
+  if (n <= 0) { 
+    printf("\n\tpid[%d] Hit 0 --> returning...", pid);
+    return; 
+  }
+  printf("\n\tpid[%d] Attempting to acquire lock | n: %d", pid, n);
+  my_spinlock_lockTAS(&mSpinlock);
+  printf("\n\tpid[%d] Acquired lock -> calling recursiveSpinLockTestFcn(%d)", pid, n-1);
+  recursiveSpinLockTestFcn(n-1);
+  printf("\n\tpid[%d] Attempting to unlock", pid);
+  my_spinlock_unlock(&mSpinlock);
+  printf("\n\tpid[%d] After unlock | n: %d", pid, n);
+}
+
+void *myRecursiveSpinLockTASTest()
+{
+  my_spinlock_init(&mSpinlock);
+  recursiveSpinLockTestFcn(4);
+}
+
 int runTestWithPthread(char* testName, void *(*f)(void*)) 
 {
 	c = 0;
@@ -192,7 +211,7 @@ int runTestWithPthread(char* testName, void *(*f)(void*))
 	}
 	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	printf("Threaded Run Pthread (%s) Total Count: %lld\n", testName, c);
+	printf("\nThreaded Run Pthread (%s) Total Count: %lld\n", testName, c);
 	result=timespecDiff(&stop,&start);
 	printf("Pthread %s time(ms): %llu\n", testName, result/1000000);
 	return 0;
@@ -206,42 +225,32 @@ int runTest(int testID)
 	// Pthread Mutex
 	if (testID == 0 || testID == 1)
 	{
-    printf("\nStart Professional Mutexlock test\n");
 		runTestWithPthread("Mutex", &pthreadMutexTest);
-    printf("Finish Professional Mutexlock test\n\n");
 	}
 
 	// Pthread Spinlock
 	if(testID == 0 || testID == 2) 
 	{
 		/* Pthread Spinlock goes here */
-    printf("\nStart Professional Spinlock test\n");
 		runTestWithPthread("Professional Spinlock", &spinLockTest);
-    printf("Finish Professional Spinlock test\n\n");
 	}
 
  	// MySpinlock TAS
 	if(testID == 0 || testID == 3)
 	{
-		printf("\nStart MySpinlock TAS test\n");
 		runTestWithPthread("MySpinlock TAS", &mySpinLockTASTest);
-		printf("Finish MySpinlock TAS test\n\n");
 	}
 
 	// MySpinlock TTAS
 	if (testID == 0 || testID == 4)
 	{
-		printf("\nStart MySpinlock TTAS test\n");
 		runTestWithPthread("MySpinlock TTAS", &mySpinLockTTASTest);
-		printf("Finish MySpinlock TTAS test\n\n");
 	}
 
 	// MyMutex TTAS
 	if (testID == 0 || testID == 5)
 	{
-    printf("Start MyMutex TTAS test\n");
-    runTestWithPthread("MyMutex TTAS test", &myMutexTTASTest);
-    printf("Finish MyMutex TTAS test\n\n");
+    runTestWithPthread("MyMutex TTAS test", &myMutexTTASTest); 
 	}
 
 	// MyQueueLock
@@ -249,6 +258,12 @@ int runTest(int testID)
 	{
 
 	}
+
+  // Recursive MySpinlock TAS
+  if (testID == 0 || testID == 7)
+  {
+    runTestWithPthread("Recursive MySpinlock TAS", &myRecursiveSpinLockTASTest);
+  }
 
 	return 0;
 }

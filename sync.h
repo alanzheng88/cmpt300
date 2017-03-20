@@ -30,6 +30,7 @@ int my_mutex_trylock(my_mutex_t *lock);
 
 struct my_spinlock_struct {
 	volatile unsigned long locked;
+  int ownerId; 
 };
 
 typedef struct my_spinlock_struct my_spinlock_t;

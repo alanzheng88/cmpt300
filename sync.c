@@ -17,6 +17,7 @@
 int my_spinlock_init(my_spinlock_t *lock)
 {
 	lock->locked = 0;
+  lock->ownerId = -1;
 	return 0;
 }
 
@@ -27,13 +28,14 @@ int my_spinlock_destroy(my_spinlock_t *lock)
 
 int my_spinlock_unlock(my_spinlock_t *lock)
 {
+  printf("unlocked function called!\n");
 	unlock(&(lock->locked));
 	return 0;
 }
 
 int my_spinlock_lockTAS(my_spinlock_t *lock)
 {
-	while (tas(&(lock->locked))) { /* keep spinning */ }
+	while (my_spinlock_trylock(lock));
 	return 0;
 }
 
@@ -42,7 +44,7 @@ int my_spinlock_lockTTAS(my_spinlock_t *lock)
 {
 	while (1) {
 		while (lock->locked) { /* keep spinning */ }
-		if (!tas(&(lock->locked))) {
+		if (!my_spinlock_trylock(lock)) {
 			// entered critical section - perform task after returning
 			return 0;
 		}
@@ -51,8 +53,12 @@ int my_spinlock_lockTTAS(my_spinlock_t *lock)
 
 int my_spinlock_trylock(my_spinlock_t *lock)
 {
-  // returns 1 if successfully acquired lock, otherwise returns 0
-  return !tas(&(lock->locked));
+  // returns 0 if successfully acquired lock, otherwise returns 1
+  if (tas(&(lock->locked))) {
+    return 1;
+  }
+ 
+  return 0;
 }
 
 
