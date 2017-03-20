@@ -16,7 +16,7 @@
 
 int my_spinlock_init(my_spinlock_t *lock)
 {
-	lock->i = 0;
+	lock->locked = 0;
 	return 0;
 }
 
@@ -27,13 +27,13 @@ int my_spinlock_destroy(my_spinlock_t *lock)
 
 int my_spinlock_unlock(my_spinlock_t *lock)
 {
-	unlock(&(lock->i));
+	unlock(&(lock->locked));
 	return 0;
 }
 
 int my_spinlock_lockTAS(my_spinlock_t *lock)
 {
-	while (tas(&(lock->i))) { /* keep spinning */ }
+	while (tas(&(lock->locked))) { /* keep spinning */ }
 	return 0;
 }
 
@@ -42,7 +42,7 @@ int my_spinlock_lockTTAS(my_spinlock_t *lock)
 {
 	while (1) {
 		while (my_spinlock_trylock(lock)) { /* keep spinning */ }
-		if (!tas(&(lock->i))) {
+		if (!tas(&(lock->locked))) {
 			// entered critical section - perform task after returning
 			return 0;
 		}
@@ -51,7 +51,7 @@ int my_spinlock_lockTTAS(my_spinlock_t *lock)
 
 int my_spinlock_trylock(my_spinlock_t *lock)
 {
-	return lock->i;
+	return lock->locked;
 }
 
 
@@ -61,7 +61,7 @@ int my_spinlock_trylock(my_spinlock_t *lock)
 
 int my_mutex_init(my_mutex_t *lock)
 {
-  lock->i = 0; 
+  lock->locked = 0; 
 	return 0;
 }
 
@@ -72,7 +72,7 @@ int my_mutex_destroy(my_mutex_t *lock)
 
 int my_mutex_unlock(my_mutex_t *lock)
 {
-  unlock(&(lock->i));
+  unlock(&(lock->locked));
 	return 0;
 }
 
@@ -84,7 +84,7 @@ int my_mutex_lock(my_mutex_t *lock)
       delay += rand() % 10 + 1;
       usleep(delay);
     }
-    if (!tas(&(lock->i))) {
+    if (!tas(&(lock->locked))) {
       return 0;
     }
   }
@@ -92,7 +92,7 @@ int my_mutex_lock(my_mutex_t *lock)
 
 int my_mutex_trylock(my_mutex_t *lock)
 {
-	return lock->i;
+	return lock->locked;
 }
 
 /*
