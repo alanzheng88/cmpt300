@@ -14,7 +14,7 @@
 #include "atomic_ops.h"
 
 struct my_mutex_struct {
-  volatile unsigned long locked;
+  volatile unsigned long lock;
 };
 
 typedef struct my_mutex_struct my_mutex_t;
@@ -29,8 +29,9 @@ int my_mutex_trylock(my_mutex_t *lock);
 /*Spinlock Starts here*/
 
 struct my_spinlock_struct {
-	volatile unsigned long locked;
-  int ownerId; 
+	volatile unsigned long lock;
+  volatile pthread_t owner;
+  volatile int count;
 };
 
 typedef struct my_spinlock_struct my_spinlock_t;

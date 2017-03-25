@@ -2,10 +2,16 @@
 #define __ATOMIC_OPS_H__
 
 
+static inline unsigned long fas(volatile int * ptr)//Test and Set
+{
+	return __sync_fetch_and_sub(ptr, 1);
+}
+
 static inline unsigned long tas(volatile unsigned long* ptr)//Test and Set
 {
 	return __sync_lock_test_and_set(ptr, 1);
 }
+
 
 static void unlock(volatile unsigned long* ptr)
 {

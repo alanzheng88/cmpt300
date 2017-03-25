@@ -81,8 +81,6 @@ void *mySpinLockTASTest()
 	
 	int localCount = 0;
 	
-	my_spinlock_init(&mSpinlock);
-
   for(i = 0; i < numItterations; i++)
   {
 		
@@ -164,24 +162,34 @@ void *myMutexTTASTest()
 }
 
 void recursiveSpinLockTestFcn(int n) {
-  int pid = pthread_self();
+  int j;
+  int k;
+
+  int localCount = 0;
+
+  pthread_t pid = pthread_self();
   if (n <= 0) { 
-    printf("\n\tpid[%d] Hit 0 --> returning...", pid);
+//    printf("\n\tpid[%d] Hit 0 --> returning...", pid);
     return; 
   }
-  printf("\n\tpid[%d] Attempting to acquire lock | n: %d", pid, n);
+  for (j = 0; j < workOutsideCS; j++) {
+    localCount++;
+  }
+//  printf("\n\tpid[%d] Attempting to acquire lock | n: %d", pid, n);
   my_spinlock_lockTAS(&mSpinlock);
-  printf("\n\tpid[%d] Acquired lock -> calling recursiveSpinLockTestFcn(%d)", pid, n-1);
+  for (k = 0; k < workInsideCS; k++) {
+    c++;
+  }
+//  printf("\n\t\tpid[%d] [1] Acquired lock -> calling recursiveSpinLockTestFcn(%d)", pid, n-1);
   recursiveSpinLockTestFcn(n-1);
-  printf("\n\tpid[%d] Attempting to unlock", pid);
+//  printf("\n\tpid[%d] [2] Attempting to unlock", pid);
   my_spinlock_unlock(&mSpinlock);
-  printf("\n\tpid[%d] After unlock | n: %d", pid, n);
+//  printf("\n\tpid[%d] [3] After unlock | n: %d", pid, n);
 }
 
 void *myRecursiveSpinLockTASTest()
 {
-  my_spinlock_init(&mSpinlock);
-  recursiveSpinLockTestFcn(4);
+  recursiveSpinLockTestFcn(numItterations); 
 }
 
 int runTestWithPthread(char* testName, void *(*f)(void*)) 
@@ -238,6 +246,7 @@ int runTest(int testID)
  	// MySpinlock TAS
 	if(testID == 0 || testID == 3)
 	{
+	  my_spinlock_init(&mSpinlock);
 		runTestWithPthread("MySpinlock TAS", &mySpinLockTASTest);
 	}
 
@@ -262,6 +271,7 @@ int runTest(int testID)
   // Recursive MySpinlock TAS
   if (testID == 0 || testID == 7)
   {
+    my_spinlock_init(&mSpinlock);
     runTestWithPthread("Recursive MySpinlock TAS", &myRecursiveSpinLockTASTest);
   }
 
@@ -284,7 +294,7 @@ int processInput(int argc, char *argv[])
 	/*You must write how to parse input from the command line here, your software should default to the values given below if no input is given*/
 	
 	numThreads=4;
-	numItterations=1000000;
+	numItterations=100000;
 	testID=0;
 	workOutsideCS=0;
 	workInsideCS=1;
