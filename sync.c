@@ -38,11 +38,11 @@ int my_spinlock_unlock(my_spinlock_t *lock)
 int my_spinlock_lockTAS(my_spinlock_t *lock)
 {
   volatile pthread_t currentThread = pthread_self();
-  volatile int isOwner = pthread_equal(lock->owner, currentThread);
   volatile int isLocked = lock->lock != 0;
   volatile int hasLocks = lock->count > 0;
+  volatile int isOwner = pthread_equal(lock->owner, currentThread);
 
-  if (isOwner && isLocked && hasLocks) { 
+  if (isLocked && hasLocks && isOwner) { 
     lock->count++;
 //    printf("\n\t\t\tpid[%d] current count: %d", pthread_self(), lock->count);  
   } else {
@@ -58,9 +58,9 @@ int my_spinlock_lockTAS(my_spinlock_t *lock)
 int my_spinlock_lockTTAS(my_spinlock_t *lock)
 {
   volatile pthread_t currentThread = pthread_self();
-  volatile int isOwner = pthread_equal(lock->owner, currentThread);
   volatile int isLocked = lock->lock != 0;
   volatile int hasLocks = lock->count > 0;
+  volatile int isOwner = pthread_equal(lock->owner, currentThread);
 
   if (isOwner && isLocked && hasLocks) { 
     lock->count++;
@@ -84,9 +84,9 @@ int my_spinlock_lockTTAS(my_spinlock_t *lock)
 int my_spinlock_trylock(my_spinlock_t *lock)
 {
   volatile pthread_t currentThread = pthread_self();
-  volatile int isOwner = pthread_equal(lock->owner, currentThread);
   volatile int isLocked = lock->lock != 0;
   volatile int hasLocks = lock->count > 0;
+  volatile int isOwner = pthread_equal(lock->owner, currentThread);
 
   if (isOwner && isLocked && hasLocks) { 
     lock->count++;
@@ -109,6 +109,7 @@ int my_spinlock_trylock(my_spinlock_t *lock)
 int my_mutex_init(my_mutex_t *lock)
 {
   lock->lock = 0; 
+  lock->count = 0;
 	return 0;
 }
 
@@ -119,22 +120,38 @@ int my_mutex_destroy(my_mutex_t *lock)
 
 int my_mutex_unlock(my_mutex_t *lock)
 {
-  unlock(&(lock->lock));
+  if (fas(&(lock->count)) == 1) {
+    unlock(&(lock->lock));
+  }
 	return 0;
 }
 
 int my_mutex_lock(my_mutex_t *lock)
 {
   useconds_t delay = 0;
-  while (1) {
-    while (lock->lock) {
-      delay += rand() % 10 + 1;
-      usleep(delay);
-    }
-    if (!tas(&(lock->lock))) {
-      return 0;
+  volatile pthread_t currentThread = pthread_self();
+  volatile int isLocked = lock->lock != 0;
+  volatile int hasLocks = lock->count > 0;
+  volatile int isOwner = pthread_equal(lock->owner, currentThread);
+
+  if (isOwner && isLocked && hasLocks) { 
+    lock->count++;
+//    printf("\n\t\t\tpid[%d] current count: %d", pthread_self(), lock->count);  
+    return 0;
+  } else {
+    while (1) {
+      while (lock->lock) {
+        delay += rand() % 10 + 1;
+        usleep(delay);
+      }
+      if (!tas(&(lock->lock))) {
+        lock->owner = currentThread;
+        lock->count = 1;
+        return 0;
+      }
     }
   }
+  return 0;
 }
 
 int my_mutex_trylock(my_mutex_t *lock)

@@ -109,8 +109,6 @@ void *mySpinLockTTASTest()
 	
 	int localCount = 0;
 	
-	my_spinlock_init(&mSpinlock);
-
   for(i = 0; i < numItterations; i++)
   {
   
@@ -139,8 +137,6 @@ void *myMutexTTASTest()
 	
 	int localCount = 0;
 	
-	my_mutex_init(&mMutexlock);
-
   for(i = 0; i < numItterations; i++)
   {
   
@@ -253,12 +249,14 @@ int runTest(int testID)
 	// MySpinlock TTAS
 	if (testID == 0 || testID == 4)
 	{
+	  my_spinlock_init(&mSpinlock);
 		runTestWithPthread("MySpinlock TTAS", &mySpinLockTTASTest);
 	}
 
 	// MyMutex TTAS
 	if (testID == 0 || testID == 5)
 	{
+	  my_mutex_init(&mMutexlock);
     runTestWithPthread("MyMutex TTAS test", &myMutexTTASTest); 
 	}
 
@@ -294,7 +292,7 @@ int processInput(int argc, char *argv[])
 	/*You must write how to parse input from the command line here, your software should default to the values given below if no input is given*/
 	
 	numThreads=4;
-	numItterations=100000;
+	numItterations=10000;
 	testID=0;
 	workOutsideCS=0;
 	workInsideCS=1;

@@ -15,6 +15,8 @@
 
 struct my_mutex_struct {
   volatile unsigned long lock;
+  volatile pthread_t owner;
+  volatile int count;
 };
 
 typedef struct my_mutex_struct my_mutex_t;
