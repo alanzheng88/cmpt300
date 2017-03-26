@@ -188,6 +188,35 @@ void *myRecursiveSpinLockTASTest()
   recursiveSpinLockTestFcn(numItterations); 
 }
 
+void recursiveMutexLockTestFcn(int n) {
+  int j;
+  int k;
+
+  int localCount = 0;
+
+  pthread_t pid = pthread_self();
+  if (n <= 0) { 
+    return; 
+  }
+  
+  for (j = 0; j < workOutsideCS; j++) {
+    localCount++;
+  }
+
+  my_mutex_lock(&mMutexlock);
+  for (k = 0; k < workInsideCS; k++) {
+    c++;
+  }
+
+  recursiveMutexLockTestFcn(n-1);
+  my_mutex_unlock(&mMutexlock);
+}
+
+void *myRecursiveMutexLockTTASTest()
+{
+  recursiveMutexLockTestFcn(numItterations); 
+}
+
 int runTestWithPthread(char* testName, void *(*f)(void*)) 
 {
 	c = 0;
@@ -229,28 +258,28 @@ int runTest(int testID)
 	// Pthread Mutex
 	if (testID == 0 || testID == 1)
 	{
-		runTestWithPthread("Mutex", &pthreadMutexTest);
+		runTestWithPthread("Professional Mutex test", &pthreadMutexTest);
 	}
 
 	// Pthread Spinlock
 	if(testID == 0 || testID == 2) 
 	{
 		/* Pthread Spinlock goes here */
-		runTestWithPthread("Professional Spinlock", &spinLockTest);
+		runTestWithPthread("Professional Spinlock test", &spinLockTest);
 	}
 
  	// MySpinlock TAS
 	if(testID == 0 || testID == 3)
 	{
 	  my_spinlock_init(&mSpinlock);
-		runTestWithPthread("MySpinlock TAS", &mySpinLockTASTest);
+		runTestWithPthread("MySpinlock TAS test", &mySpinLockTASTest);
 	}
 
 	// MySpinlock TTAS
 	if (testID == 0 || testID == 4)
 	{
 	  my_spinlock_init(&mSpinlock);
-		runTestWithPthread("MySpinlock TTAS", &mySpinLockTTASTest);
+		runTestWithPthread("MySpinlock TTAS test", &mySpinLockTTASTest);
 	}
 
 	// MyMutex TTAS
@@ -270,7 +299,14 @@ int runTest(int testID)
   if (testID == 0 || testID == 7)
   {
     my_spinlock_init(&mSpinlock);
-    runTestWithPthread("Recursive MySpinlock TAS", &myRecursiveSpinLockTASTest);
+    runTestWithPthread("Recursive MySpinlock TAS test", &myRecursiveSpinLockTASTest);
+  }
+
+  // Recursive MyMutexlock TTAS
+  if (testID == 0 || testID == 8)
+  {
+    my_mutex_init(&mMutexlock);
+    runTestWithPthread("Recursive MyMutex TTAS test", &myRecursiveMutexLockTTASTest);
   }
 
 	return 0;
