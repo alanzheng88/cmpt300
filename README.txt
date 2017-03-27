@@ -9,5 +9,6 @@ Example of running the program:
   -> make ARGS="-i 100 -d 5" run        // run the 5th test with 100 iterations
 
 Measurements:
-  -
+
+-> See images folder
 
