@@ -256,41 +256,41 @@ int runTest(int testID)
 	/*You must create all data structures and threads for you experiments*/
 
 	// Pthread Mutex
-	if (testID == 0 || testID == 1)
+	if (testID == 10 || testID == 0 || testID == 1)
 	{
 		runTestWithPthread("Professional Mutex test", &pthreadMutexTest);
 	}
 
 	// Pthread Spinlock
-	if(testID == 0 || testID == 2) 
+	if(testID == 10 || testID == 0 || testID == 2) 
 	{
 		/* Pthread Spinlock goes here */
 		runTestWithPthread("Professional Spinlock test", &spinLockTest);
 	}
 
  	// MySpinlock TAS
-	if(testID == 0 || testID == 3)
+	if(testID == 10 || testID == 0 || testID == 3)
 	{
 	  my_spinlock_init(&mSpinlock);
 		runTestWithPthread("MySpinlock TAS test", &mySpinLockTASTest);
 	}
 
 	// MySpinlock TTAS
-	if (testID == 0 || testID == 4)
+	if (testID == 10 || testID == 0 || testID == 4)
 	{
 	  my_spinlock_init(&mSpinlock);
 		runTestWithPthread("MySpinlock TTAS test", &mySpinLockTTASTest);
 	}
 
 	// MyMutex TTAS
-	if (testID == 0 || testID == 5)
+	if (testID == 10 || testID == 0 || testID == 5)
 	{
 	  my_mutex_init(&mMutexlock);
     runTestWithPthread("MyMutex TTAS test", &myMutexTTASTest); 
 	}
 
 	// MyQueueLock
-	if (testID == 0 || testID == 6)
+	if (testID == 10 || testID == 0 || testID == 6)
 	{
 
 	}
@@ -328,7 +328,7 @@ int processInput(int argc, char *argv[])
 	/*You must write how to parse input from the command line here, your software should default to the values given below if no input is given*/
 	
 	numThreads=4;
-	numItterations=10000;
+	numItterations=130000;
 	testID=0;
 	workOutsideCS=0;
 	workInsideCS=1;
