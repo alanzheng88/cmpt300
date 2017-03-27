@@ -296,14 +296,14 @@ int runTest(int testID)
 	}
 
   // Recursive MySpinlock TAS
-  if (testID == 0 || testID == 7)
+  if (testID == 10 || testID == 7)
   {
     my_spinlock_init(&mSpinlock);
     runTestWithPthread("Recursive MySpinlock TAS test", &myRecursiveSpinLockTASTest);
   }
 
   // Recursive MyMutexlock TTAS
-  if (testID == 0 || testID == 8)
+  if (testID == 10 || testID == 8)
   {
     my_mutex_init(&mMutexlock);
     runTestWithPthread("Recursive MyMutex TTAS test", &myRecursiveMutexLockTTASTest);
