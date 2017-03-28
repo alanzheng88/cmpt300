@@ -50,7 +50,8 @@ int my_spinlock_trylock(my_spinlock_t *lock);
 /*queuelock Starts here*/
 
 struct my_queuelock_struct {
-  /* FILL ME IN! */
+  volatile int currentTicketNumber;
+  volatile int newTicketNumber;
 };
 
 typedef struct my_queuelock_struct my_queuelock_t;

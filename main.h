@@ -24,6 +24,7 @@ pthread_mutex_t count_mutex;
 pthread_spinlock_t pSpinlock;
 my_spinlock_t mSpinlock;
 my_mutex_t mMutexlock;
+my_queuelock_t mQueuelock;
 
 
 unsigned long long timespecDiff(struct timespec *timeA_p, struct timespec *timeB_p)

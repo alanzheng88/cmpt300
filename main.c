@@ -217,6 +217,35 @@ void *myRecursiveMutexLockTTASTest()
   recursiveMutexLockTestFcn(numItterations); 
 }
 
+
+void *myQueueLockTest()
+{	
+  int i;
+	int j;
+	int k;
+	
+	int localCount = 0;
+	
+  for(i = 0; i < numItterations; i++)
+  {
+  
+    for(j = 0; j < workOutsideCS; j++)/*How much work is done outside the CS*/
+    {
+      localCount++;
+    }
+    
+    my_queuelock_lock(&mQueuelock); 
+    for(k = 0; k < workInsideCS; k++)/*How much work is done inside the CS*/
+    {
+      c++;
+    }
+    my_queuelock_unlock(&mQueuelock);
+  
+  }   
+
+  pthread_exit(NULL);
+}
+
 int runTestWithPthread(char* testName, void *(*f)(void*)) 
 {
 	c = 0;
@@ -292,7 +321,8 @@ int runTest(int testID)
 	// MyQueueLock
 	if (testID == 10 || testID == 0 || testID == 6)
 	{
-
+    my_queuelock_init(&mQueuelock);
+    runTestWithPthread("MyQueueLock test", &myQueueLockTest);
 	}
 
   // Recursive MySpinlock TAS

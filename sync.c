@@ -180,22 +180,45 @@ int my_mutex_trylock(my_mutex_t *lock)
 
 int my_queuelock_init(my_queuelock_t *lock)
 {
-	return -1;
+  lock->currentTicketNumber = 1;
+  lock->newTicketNumber = 1;
+	return 0;
 }
 
 int my_queuelock_destroy(my_queuelock_t *lock)
 {
-	return -1;
+	return 0;
 }
 
 int my_queuelock_unlock(my_queuelock_t *lock)
 {
-	return -1;
+  //printf("\n\t[%lu] finished task for ticket number %d.. unlocking", pthread_self(), lock->currentTicketNumber);
+  faa(&(lock->currentTicketNumber));
+	return 0;
 }
 
 int my_queuelock_lock(my_queuelock_t *lock)
 {
-	return -1;
+  int ticketNumber = faa(&(lock->newTicketNumber));
+//  printf("\n\t\t\t[%lu] acquired ticket number %d", pthread_self(), ticketNumber);
+//  int retValue = cas((volatile long unsigned int *)&(lock->currentTicketNumber), ticketNumber, ticketNumber+1);
+  int retValue;
+  while ((retValue = cas((volatile long unsigned int *)&(lock->currentTicketNumber), ticketNumber, ticketNumber+1)) != ticketNumber) {
+    /*
+    printf("\n\n\t\t\t\t[%lu] my ticket number (CAS) %d", pthread_self(), retValue);
+    printf("\n\t\t\t\t[%lu] ticket number up next %d", pthread_self(), lock->currentTicketNumber);
+    printf("\n\t\t\t\t[%lu] my ticket number (obtained at start) %d", pthread_self(), ticketNumber);
+
+    if (retValue == lock->currentTicketNumber) {
+      printf("\n\t[%lu] current ticket number: %lu", pthread_self(), lock->currentTicketNumber);
+      printf("\n\t[%lu] It's my turn!! -- ticket# %d :)", pthread_self(), ticketNumber);
+      printf("\n\t[%lu] return value is %d", pthread_self(), retValue);
+    }
+    */
+  }
+  //printf("\n\t[%lu] has access to critical section", pthread_self());
+  
+  return 0;
 }
 
 int my_queuelock_trylock(my_queuelock_t *lock)
