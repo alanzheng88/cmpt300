@@ -358,7 +358,7 @@ int processInput(int argc, char *argv[])
 	/*You must write how to parse input from the command line here, your software should default to the values given below if no input is given*/
 	
 	numThreads=4;
-	numItterations=130000;
+	numItterations=50000;
 	testID=0;
 	workOutsideCS=0;
 	workInsideCS=1;
