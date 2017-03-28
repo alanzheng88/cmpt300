@@ -223,6 +223,12 @@ int my_queuelock_lock(my_queuelock_t *lock)
 
 int my_queuelock_trylock(my_queuelock_t *lock)
 {
-	return -1;
+  int ticketNumber = faa(&(lock->newTicketNumber));
+  int retValue;
+  if ((retValue = cas((volatile long unsigned int *)&(lock->currentTicketNumber), ticketNumber, ticketNumber+1)) != ticketNumber) {
+    return -1;
+  } else {
+	  return 0;
+  }
 }
 
